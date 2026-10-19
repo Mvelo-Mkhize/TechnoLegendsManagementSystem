@@ -1,0 +1,9 @@
+﻿<Router AppAssembly="typeof(MauiProgram).Assembly"
+        AdditionalAssemblies="new[] { typeof(TechnoLegendsManagementSystem.Shared.Pages.MobileLogin).Assembly }">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(TechnoLegendsManagementSystem.Shared.Pages.EmptyLayout)">
+            <NotAuthorized><RedirectToMobileLogin /></NotAuthorized>
+            <Authorizing><p>Authorizing…</p></Authorizing>
+        </AuthorizeRouteView>
+    </Found>
+</Router>

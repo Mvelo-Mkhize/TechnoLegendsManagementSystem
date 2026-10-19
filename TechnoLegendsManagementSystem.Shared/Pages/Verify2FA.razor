@@ -1,0 +1,121 @@
+﻿@page "/verify-2fa"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<div class="mfa-container">
+    <div class="mfa-card">
+        <div class="mfa-header">
+            <div class="icon-circle">🔐</div>
+            <h2>Authorize This Workstation</h2>
+            <p>Verify your identity using your assigned security token or hardware key.</p>
+        </div>
+
+        <div class="verification-tabs">
+            <button class="tab active">📱 Security Code (OTP)</button>
+            <button class="tab">🔑 Hardware Key</button>
+            <button class="tab">👤 Department Lead</button>
+            <button class="tab">📱 Authenticator</button>
+        </div>
+
+        <div class="challenge-info">
+            <p>Challenge issued to: <strong>@Email</strong> <a href="#" class="re-route">Re-route email</a></p>
+        </div>
+
+        <div class="otp-section">
+            <label>Enter 6-Digit Passcode *</label>
+            <div class="otp-inputs">
+                @for (int i = 0; i < 6; i++)
+                {
+                    var idx = i;
+                    <input type="text" maxlength="1" inputmode="numeric" class="otp-input"
+                           @bind="OtpDigits[idx]" @bind:event="oninput" />
+                }
+            </div>
+            <div class="otp-footer">
+                <span class="verified-badge">✅ Hardware entropy verified</span>
+                <span class="expiry">⏱ Expires in <strong>04:37</strong></span>
+            </div>
+        </div>
+
+        <div class="trust-device">
+            <label><input type="checkbox" @bind="TrustDevice" /> Trust this workstation for 30 days</label>
+            <small>Recommended for dedicated campus lab workstations.</small>
+        </div>
+
+        <button class="btn btn-primary btn-block" @onclick="VerifyCodeAsync" disabled="@IsVerifying">
+            @if (IsVerifying)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+            }
+            else
+            {
+
+                <span>Verify & Launch Workspace →</span>
+            }
+        </button>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger mt-3">@ErrorMessage</div>
+        }
+
+        <div class="resend-section">
+            <button class="btn btn-link" @onclick="ResendCodeAsync" disabled="@ResendDisabled">🔄 Resend Code</button>
+        </div>
+
+        <div class="alternative-options">
+            <h4>ALTERNATIVE VERIFICATION OPTIONS</h4>
+            <div class="alternative-buttons">
+                <button class="btn btn-outline-secondary">🔑 Hardware Key / FIDO2</button>
+                <button class="btn btn-outline-secondary">👤 Department Lead Override</button>
+            </div>
+        </div>
+
+        <div class="mfa-footer">
+            <span>🌿 Sprint 42 Active</span><span>99.1% Quorum Reached</span><span>🔵 5 Engineering Guilds Online</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private SupabaseAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
+
+    private string[] OtpDigits { get; set; } = new string[6];
+    private bool TrustDevice { get; set; }
+    private bool IsVerifying { get; set; }
+    private bool ResendDisabled { get; set; }
+    private string? FactorId { get; set; }
+    private string Email { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Email = AuthService.CurrentSession?.User?.Email ?? "";
+        var factors = await AuthService.ListFactorsAsync();
+        FactorId = factors?.FirstOrDefault(f => f.FactorType == "totp" || f.FriendlyName != null)?.Id
+                   ?? factors?.FirstOrDefault()?.Id;
+    }
+
+    private async Task VerifyCodeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(FactorId)) { ErrorMessage = "No TOTP factor enrolled."; return; }
+        IsVerifying = true; ErrorMessage = null;
+        try
+        {
+            var code = string.Concat(OtpDigits);
+            await AuthService.ChallengeAndVerifyMfaAsync(FactorId, code);
+            if (AuthProvider is SupabaseAuthStateProvider sp) sp.NotifyAuthenticationChanged();
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsVerifying = false; }
+    }
+
+    private Task ResendCodeAsync()
+    {
+        ResendDisabled = true;
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,139 @@
+﻿@page "/"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+
+<PageTitle>Dashboard</PageTitle>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div>
+            <span class="badge">ENGINEERING CONSOLE</span>
+            <span class="badge secondary">TLMS Campus • Cluster #01</span>
+            <h1>Engineering Workspace Overview</h1>
+        </div>
+        <div class="sprint-info">
+            <span>🔄 Sprint 42: 14/16 deployed</span>
+            <span class="badge success">99.1% Quorum</span>
+            <span>📊 87.5% Ends in 2d 14h</span>
+        </div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-header"><span>KNOWLEDGE SPECS</span><span class="badge success">+12</span></div>
+            <h2>148</h2><p>Indexed Documents</p><small>42 PRDs • 86 Specs • 20 Guides</small>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header"><span>ACTIVE CODEBASES</span><span class="badge secondary">Git Enterprise</span></div>
+            <h2>24</h2><p>Repositories</p>
+            <div class="kpi-stats"><span>19 Synced</span><span>5 Active PRs</span><span>CI Validated</span></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header"><span>WEEKLY THROUGHPUT</span><span class="badge success">↗ +18.4%</span></div>
+            <h2>482</h2><p>Commits This Week</p><small>Top: tLms-core-api (164 commits)</small>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-header"><span>LIVE ENVIRONMENTS</span><span class="badge success">98.8%</span></div>
+            <h2>16</h2><p>Active Demos</p>
+            <div class="kpi-stats"><span>4 Staging</span><span>12 Previews</span><span>0 Errors</span></div>
+        </div>
+        <div class="kpi-card dark">
+            <div class="kpi-header"><span>STUDENT GUILD QUORUM</span><span class="badge success">100% Sync</span></div>
+            <h2>5 Wings</h2><p>38 Peer Contributors</p><small>Next: Fri 17:00 UTC</small>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h3>Department Velocity</h3>
+                <span class="badge">Sprint 42</span>
+                <span class="badge secondary">Velocity Quorum</span>
+            </div>
+            <p class="card-subtitle">5 student engineering wings workload distribution.</p>
+            <div class="velocity-summary">
+                <div class="progress-bar"><div class="progress-fill" style="width: 84%"></div></div>
+                <small>482 logged contributions / Target: 500 / Sprint</small>
+            </div>
+            <div class="velocity-list">
+                @foreach (var v in Velocities)
+                {
+                    <div class="velocity-item">
+                        <span class="guild-badge">@v.Icon @v.Name</span>
+                        <span>@v.Percent%</span>
+                        <span class="count">@v.Detail</span>
+                        <div class="progress-bar small"><div class="progress-fill" style="width: @(v.Percent)%"></div></div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Documents</h3>
+                <span class="badge">148 Total</span>
+                <a href="#" class="view-all">View All (148) →</a>
+            </div>
+            <div class="doc-filters">
+                <button class="filter active">All (148)</button>
+                <button class="filter">Specs</button>
+                <button class="filter">RFCs</button>
+                <button class="filter">Notes</button>
+                <button class="filter">Audit</button>
+            </div>
+            <table class="doc-table">
+                <thead><tr><th>Document Name</th><th>Dept</th><th>Author</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Documents)
+                    {
+                        <tr>
+                            <td><strong>@d.Name</strong><br /><small>@d.Detail</small></td>
+                            <td><span class="badge">@d.Dept</span></td>
+                            <td><span class="avatar">@d.Author</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="dashboard-sidebar">
+            <div class="card">
+                <div class="card-header"><h4>Recent Commits</h4><a href="#">GitHub Logs →</a></div>
+                <div class="commit-list">
+                    <div class="commit-item"><span class="badge">main</span><span class="hash">#f9e82c1</span><p>refactor(auth): migrate JWT tokens to ...</p><small>Alex R. • 12m ago</small></div>
+                    <div class="commit-item"><span class="badge">feat/auth</span><span class="hash">#a410de8</span><p>feat(ui): implement adaptive token sets</p><small>Sarah C. • 45m ago</small></div>
+                    <div class="commit-item"><span class="badge">fix/webrtc</span><span class="hash">#5b8214f</span><p>fix(audio): resolve ICE candidate...</p><small>Dev Guild • 2h ago</small></div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h4>Active App Demos</h4><span class="badge success">16 Live</span></div>
+                <div class="demo-list">
+                    <div class="demo-item"><span>📱</span><div><strong>TLMS Mobile v4.8 Beta</strong><small>iOS / Android Preview</small></div><button class="btn btn-sm">Launch</button></div>
+                    <div class="demo-item"><span>💻</span><div><strong>WebRTC Voice Room</strong><small>Browser Mesh Protocol v2</small></div><button class="btn btn-sm">Connect</button></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private record Velocity(string Icon, string Name, int Percent, string Detail);
+    private record DocItem(string Name, string Detail, string Dept, string Author);
+
+    private readonly Velocity[] Velocities =
+    {
+        new("🔧", "#development", 84, "210 commits • 18 PRs"),
+        new("🎨", "#design", 92, "34 Figma specs"),
+        new("📊", "#business-analysis", 76, "14 briefs"),
+        new("📋", "#management", 100, "9 syncs"),
+        new("📣", "#marketing", 60, "4 collaterals")
+    };
+
+    private readonly DocItem[] Documents =
+    {
+        new("TLMS v4.9 Architecture RFC", "RFC-2024-09 • Core Gateway", "#dev", "AR"),
+        new("Design Token Spec v2", "SPEC-UI-04 • CSS Variables", "#design", "SS"),
+        new("Sprint 43 Capacity Model", "MGT-2024-Q3 • Engineering Load", "#mgmt", "MV"),
+        new("WebRTC Protocol Benchmark", "TECH-P2P-88 • Latency Under Packet Loss", "#dev", "DC")
+    };
+}

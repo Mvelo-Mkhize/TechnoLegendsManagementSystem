@@ -1,0 +1,129 @@
+﻿@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<div class="login-container">
+    <div class="login-left-panel">
+        <div class="brand">
+            <h2>Techno Legends</h2>
+            <p class="version">v4.8 Stable</p>
+        </div>
+        <h1>Architecting the future of<br />student-led engineering.</h1>
+        <p class="tagline">
+            Powering remote collaboration, sprint velocity tracking, and
+            automated quorum validation for elite student technologists.
+        </p>
+
+        <div class="active-cycle-card">
+            <span class="label">ACTIVE CYCLE</span>
+            <span class="sprint">Sprint 42</span>
+            <h3>99.1% Quorum Reached</h3>
+            <div class="progress-bar"><div class="progress-fill" style="width: 99.1%"></div></div>
+        </div>
+
+        <div class="feature-list">
+            <div class="feature-item"><span>📦</span><div><strong>5 Specialized Guilds</strong><small>#management • #business-analysis • #design • #dev • #marketing</small></div></div>
+            <div class="feature-item"><span>📈</span><div><strong>Real-Time Sprint Telemetry</strong><small>Automated standups, task health matrix, and commit sync</small></div></div>
+            <div class="feature-item"><span>📹</span><div><strong>Decentralized WebRTC Rooms</strong><small>Ephemeral voice rooms, secure screenshare, zero logs</small></div></div>
+        </div>
+
+        <div class="footer-note">
+            <span>🔒 Encrypted Portal • SSO & 2FA Protected</span><span>TL-CORE-2025</span>
+        </div>
+    </div>
+
+    <div class="login-right-panel">
+        <div class="login-form-wrapper">
+            <div class="status-badge"><span class="dot"></span> System Status: All systems operational</div>
+            <h2>Welcome back</h2>
+            <p class="subtitle">Log in to access your assigned squad sprint dashboard and team comms.</p>
+
+            <EditForm Model="Model" OnValidSubmit="HandleLoginAsync">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label>Organization Email Address</label>
+                    <InputText @bind-Value="Model.Email" class="form-control" placeholder="alex.rivera@technolegends.org" />
+                    <ValidationMessage For="@(() => Model.Email)" />
+                </div>
+                <div class="form-group">
+                    <label>Master Password</label>
+                    <InputText @bind-Value="Model.Password" type="password" class="form-control" placeholder="Enter your password" />
+                    <ValidationMessage For="@(() => Model.Password)" />
+                </div>
+                <div class="form-check">
+                    <InputCheckbox @bind-Value="Model.RememberDevice" class="form-check-input" />
+                    <label class="form-check-label">Remember this device for 30 days</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" disabled="@IsLoading">
+                    @if (IsLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                    }
+                    else
+                    {
+
+                        <span>→ Authenticate into Workspace</span>
+                    }
+                </button>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mt-3">@ErrorMessage</div>
+            }
+
+            <div class="divider"><span>OR CONTINUE WITH INSTITUTIONAL IDENTITY</span></div>
+            <div class="sso-buttons">
+                <button class="btn btn-outline-dark btn-block" @onclick="HandleGitHubSsoAsync">🐙 GitHub Enterprise</button>
+                <button class="btn btn-outline-dark btn-block" @onclick="HandleUniversitySsoAsync">🏛 University SAML / SSO</button>
+            </div>
+
+            <div class="security-note">
+                <span>🔐</span>
+                <p>Hardware Security Keys Supported. YubiKey and WebAuthn hardware tokens can be verified following password entry.</p>
+            </div>
+
+            <div class="footer-links">
+                <span>Need workspace access? <a href="#">Contact Department Lead</a></span>
+                <span><a href="#">Policies</a> • <a href="#">Incident Log</a></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private SupabaseAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
+
+    private LoginModel Model { get; set; } = new();
+    private bool IsLoading { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    private async Task HandleLoginAsync()
+    {
+        IsLoading = true; ErrorMessage = null;
+        try
+        {
+            var session = await AuthService.SignInAsync(Model.Email, Model.Password);
+            if (session?.User == null) { ErrorMessage = "Invalid credentials."; return; }
+
+            if (AuthProvider is SupabaseAuthStateProvider sp) sp.NotifyAuthenticationChanged();
+
+            var aal = session.AccessToken?.Contains("\"aal\":\"aal2\"") == true ? "aal2" : "aal1";
+            Nav.NavigateTo(aal == "aal2" ? "/" : "/verify-2fa");
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsLoading = false; }
+    }
+
+    private Task HandleGitHubSsoAsync() => Task.CompletedTask;
+    private Task HandleUniversitySsoAsync() => Task.CompletedTask;
+
+    public class LoginModel
+    {
+        [Required, EmailAddress] public string Email { get; set; } = string.Empty;
+        [Required, MinLength(8)] public string Password { get; set; } = string.Empty;
+        public bool RememberDevice { get; set; }
+    }
+}

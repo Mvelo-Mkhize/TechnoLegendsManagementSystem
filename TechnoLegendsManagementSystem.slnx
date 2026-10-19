@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="TechnoLegendsManagementSystem.API/TechnoLegendsManagementSystem.API.csproj" />
+  <Project Path="TechnoLegendsManagementSystem.Shared/TechnoLegendsManagementSystem.Shared.csproj" />
+  <Project Path="TechnoLegendsManagementSystem.Web/TechnoLegendsManagementSystem.Web.csproj" />
+  <Project Path="TechnoLegendsManagementSystem/TechnoLegendsManagementSystem.csproj">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>

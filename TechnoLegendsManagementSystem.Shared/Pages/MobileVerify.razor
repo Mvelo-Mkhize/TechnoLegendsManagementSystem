@@ -1,0 +1,142 @@
+﻿@page "/mobile-verify"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+
+<div class="mobile-verify-container">
+    <div class="verify-top-bar">
+        <button class="back-btn" @onclick="GoBack">← Back to sign in</button>
+        <span class="auth-version">🔒 TLMS Auth v2.4</span>
+    </div>
+
+    <div class="verify-header">
+        <div class="icon-circle">📧</div>
+        <h2>Verify your account</h2>
+        <p>We sent a 6-digit verification code to your organization email</p>
+        <strong>@Email</strong>
+        <a href="#" class="change-link">✏ Change</a>
+    </div>
+
+    <div class="otp-card">
+        <div class="otp-card-header">
+            <span>SECURITY PASSCODE</span>
+            <span class="code-validity">🔵 Code valid for 09:58</span>
+        </div>
+        <div class="otp-inputs">
+            @for (int i = 0; i < 6; i++)
+            {
+                var idx = i;
+                <input type="text" maxlength="1" inputmode="numeric" class="otp-digit"
+                       @bind="OtpDigits[idx]" @bind:event="oninput" />
+            }
+        </div>
+        <button class="btn btn-primary btn-block" @onclick="VerifyCodeAsync" disabled="@IsVerifying">
+            @if (IsVerifying)
+            {
+                <span class="spinner-border spinner-border-sm"></span>
+            }
+            else
+            {
+
+                <span>✅ Verify & Proceed</span>
+            }
+        </button>
+        <p class="resend-text">
+            Didn't receive the code?
+            <a href="#" @onclick="ResendCodeAsync" class="resend-link">↻ Resend code in @Countdown s</a>
+        </p>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger mt-3">@ErrorMessage</div>
+        }
+    </div>
+
+    <div class="keypad-card">
+        <div class="keypad-header"><span>⌨ Quick Dial Keypad</span><span class="badge success">● Live Encrypted</span></div>
+        <div class="keypad-grid">
+            @for (int i = 1; i <= 9; i++)
+            {
+                var num = i;
+                <button class="keypad-btn" @onclick="() => AppendDigit(num.ToString())">
+                    <span class="num">@num</span><small>@GetLetters(num)</small>
+                </button>
+            }
+            <button class="keypad-btn" @onclick="PasteCode">📋 Paste</button>
+            <button class="keypad-btn" @onclick="() => AppendDigit('0'.ToString())"><span class="num">0</span></button>
+            <button class="keypad-btn" @onclick="DeleteLastDigit">⌫ Del</button>
+        </div>
+    </div>
+
+    <div class="compliance-notice">
+        <span>🛡</span>
+        <div>
+            <strong>Authorized Department Access</strong>
+            <p>Protected session monitored by Techno Legends Identity Security. If you did not initiate this request, notify your IT administrator immediately.</p>
+            <span class="badge">SOC 2 Compliant</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private SupabaseAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
+
+    private string?[] OtpDigits { get; set; } = new string?[6];
+    private bool IsVerifying { get; set; }
+    private int Countdown { get; set; } = 42;
+    private string? FactorId { get; set; }
+    private string Email { get; set; } = "";
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Email = AuthService.CurrentSession?.User?.Email ?? "";
+        var factors = await AuthService.ListFactorsAsync();
+        FactorId = factors?.FirstOrDefault()?.Id;
+    }
+
+    private void AppendDigit(string digit)
+    {
+        for (int i = 0; i < OtpDigits.Length; i++)
+            if (string.IsNullOrEmpty(OtpDigits[i])) { OtpDigits[i] = digit; break; }
+    }
+
+    private void DeleteLastDigit()
+    {
+        for (int i = OtpDigits.Length - 1; i >= 0; i--)
+            if (!string.IsNullOrEmpty(OtpDigits[i])) { OtpDigits[i] = null; break; }
+    }
+
+    private void PasteCode() { /* implement via Clipboard API */ }
+
+    private string GetLetters(int num) => num switch
+    {
+        2 => "ABC",
+        3 => "DEF",
+        4 => "GHI",
+        5 => "JKL",
+        6 => "MNO",
+        7 => "PQRS",
+        8 => "TUV",
+        9 => "WXYZ",
+        _ => ""
+    };
+
+    private async Task VerifyCodeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(FactorId)) { ErrorMessage = "No TOTP factor enrolled."; return; }
+        IsVerifying = true; ErrorMessage = null;
+        try
+        {
+            var code = string.Concat(OtpDigits);
+            await AuthService.ChallengeAndVerifyMfaAsync(FactorId, code);
+            if (AuthProvider is SupabaseAuthStateProvider sp) sp.NotifyAuthenticationChanged();
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsVerifying = false; }
+    }
+
+    private Task ResendCodeAsync() => Task.CompletedTask;
+    private void GoBack() => Nav.NavigateTo("/mobile-login");
+}

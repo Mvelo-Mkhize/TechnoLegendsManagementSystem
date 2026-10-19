@@ -1,0 +1,11 @@
+﻿<Router AppAssembly="typeof(Program).Assembly"
+        AdditionalAssemblies="new[] { typeof(TechnoLegendsManagementSystem.Shared.Pages.Login).Assembly }">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData"
+                            DefaultLayout="typeof(TechnoLegendsManagementSystem.Shared.Layout.MainLayout)">
+            <NotAuthorized><RedirectToLogin /></NotAuthorized>
+            <Authorizing><p>Authorizing…</p></Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
