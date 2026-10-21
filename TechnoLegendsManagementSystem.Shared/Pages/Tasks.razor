@@ -1,0 +1,166 @@
+﻿@page "/tasks" 
+@layout MobileLayout
+@attribute [Authorize]
+@inject ITaskService Svc
+@inject ProfileService Profiles
+
+<div class="row between mb" style="align-items:flex-end">
+    <div>
+        <div class="eyebrow">@sprint &bull; Active Backlog</div>
+        <h1 class="h1">Tasks &amp;<br />Deliverables</h1>
+    </div>
+    <a href="tasks/new" class="btn-dark"><i class="bi bi-plus-lg"></i> New</a>
+</div>
+
+<div class="field" style="margin-bottom:10px">
+    <div class="input-wrap">
+        <i class="bi bi-search"></i>
+        <input @bind="search" @bind:event="oninput" placeholder="Search tasks, projects, assignees..." />
+        <span class="toggle"><i class="bi bi-sliders"></i></span>
+    </div>
+</div>
+@if (loadError is not null)
+{
+    <div class="error">@loadError</div>
+}
+s
+
+<div class="seg mb">
+    @foreach (var (st, label) in statuses)
+    {
+        <button class="@(tab == st ? "on" : "")" @onclick="() => tab = st">@label <span class="count">@Count(st)</span></button>
+    }
+</div>
+
+<div class="filters">
+    @foreach (var (key, label) in filters)
+    {
+        <button class="fchip @(filter == key ? "on" : "")" @onclick="() => filter = key">@label</button>
+    }
+</div>
+
+@{
+    var list = Visible.ToList();
+}
+
+@foreach (var t in list)
+{
+    <a href="tasks/@t.Id" class="task-card">
+        <div class="row between">
+            <div class="row" style="gap:6px;flex-wrap:wrap">
+                <span class="chip @PriClass(t.Priority)"><i class="bi bi-flag-fill"></i> @t.Priority Priority</span>
+                <span class="chip">@t.Department</span>
+            </div>
+            <span class="circle"></span>
+        </div>
+
+        <div class="task-title">@t.Title</div>
+        <div class="xs muted"><i class="bi bi-folder2"></i> @t.Project</div>
+
+        @if (t.Subtasks.Count > 0)
+        {
+            <div class="sub-box">
+                <div class="row between xs">
+                    <span class="muted"><i class="bi bi-list-check"></i> Subtasks completed</span>
+                    <span class="bold" style="color:var(--blue)">@t.SubtasksDone/@t.Subtasks.Count (@t.Progress%)</span>
+                </div>
+                <div class="bar" style="margin-top:6px"><div style="width:@(t.Progress)%"></div></div>
+            </div>
+        }
+
+        @if (t.Badge is not null)
+        {
+            <div class="row mt xs"><span class="chip green">@t.Badge</span><span class="muted">@t.BadgeNote</span></div>
+        }
+
+        @if (t.Comments.Count > 0 || t.Attachments.Count > 0)
+        {
+            <div class="row xs muted" style="gap:12px;margin-top:8px">
+                @if (t.Comments.Count > 0)
+                {
+                    <span><i class="bi bi-chat"></i> @t.Comments.Count comments</span>
+                }
+                @if (t.Attachments.Count > 0)
+                {
+                    <span><i class="bi bi-paperclip"></i> @t.Attachments.Count attachment</span>
+                }
+            </div>
+        }
+
+        <div class="row between" style="margin-top:10px">
+            <span class="xs bold @(t.DueSoon ? "danger" : "")"><i class="bi bi-calendar-event"></i> @t.DueLabel</span>
+            <div class="row" style="gap:6px">
+                @if (t.Assignees.Count == 1)
+                {
+                    <span class="xs bold">@t.Assignees[0].Person.Name</span>
+                }
+                <div class="avatars">
+                    @foreach (var a in t.Assignees)
+                    {
+                        <div class="avatar sm">@a.Person.Initials</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </a>
+}
+
+@if (list.Count == 0)
+{
+    <div class="center muted mt">No tasks here.</div>
+}
+
+@code {
+    private static readonly (WorkStatus, string)[] statuses =
+    {
+        (WorkStatus.ToDo, "To Do"), (WorkStatus.InProgress, "In Progress"), (WorkStatus.Done, "Done")
+    };
+
+    private static readonly (string, string)[] filters =
+    {
+        ("all", "All"), ("team", "My Team (#dev)"), ("high", "High Priority"), ("mine", "Assigned to me")
+    };
+
+    private List<TaskItem> tasks = new();
+    private WorkStatus tab = WorkStatus.InProgress;
+    private string filter = "all", search = "", sprint = "Sprint";
+
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await Profiles.GetAsync();
+            tasks = await Svc.GetTasksAsync();
+            sprint = tasks.FirstOrDefault()?.Sprint ?? "Sprint";
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+    }
+    private int Count(WorkStatus s) => tasks.Count(t => t.Status == s);
+
+    private IEnumerable<TaskItem> Visible => tasks
+        .Where(t => t.Status == tab)
+        .Where(t => filter switch
+        {
+            "team" => t.Department.Contains(CurrentUser.Department),
+            "high" => t.Priority == TaskPriority.High,
+            "mine" => t.Assignees.Any(a => a.Person.Name == CurrentUser.Name),
+            _ => true
+        })
+        .Where(t => string.IsNullOrWhiteSpace(search)
+            || t.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || t.Project.Contains(search, StringComparison.OrdinalIgnoreCase)
+            || t.Assignees.Any(a => a.Person.Name.Contains(search, StringComparison.OrdinalIgnoreCase)))
+        .OrderBy(t => t.Due);
+
+    private static string PriClass(TaskPriority p) => p switch
+    {
+        TaskPriority.High => "red",
+        TaskPriority.Low => "gray",
+        _ => ""
+    };
+}

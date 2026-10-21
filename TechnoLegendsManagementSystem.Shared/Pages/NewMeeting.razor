@@ -1,0 +1,77 @@
+﻿@page "/attendance/new"
+@layout MobileLayout
+@attribute [Authorize]
+@inject IMeetingService Svc
+@inject NavigationManager Nav
+
+<a href="attendance" class="xs bold" style="display:inline-block;margin-bottom:10px">
+    <i class="bi bi-arrow-left"></i> Back to meetings
+</a>
+<h1 class="h2">New Meeting</h1>
+<p class="xs muted mb">Create the meeting in Teams first, then paste its link here.</p>
+
+@if (error is not null)
+{
+    <div class="error">@error</div>
+}
+
+<div class="card">
+    <div class="field">
+        <label>Title</label>
+        <input class="control" maxlength="120" placeholder="Weekly Dev Standup" @bind="title" @bind:event="oninput" />
+    </div>
+    <div class="field">
+        <label>Meeting link</label>
+        <input class="control" type="url" placeholder="https://teams.microsoft.com/..." @bind="link" @bind:event="oninput" />
+    </div>
+    <div class="field">
+        <label>Starts</label>
+        <input class="control" type="datetime-local" @bind="start" />
+    </div>
+    <div class="field">
+        <label>Duration (minutes)</label>
+        <input class="control" type="number" min="5" max="480" @bind="duration" />
+    </div>
+</div>
+
+<button class="btn btn-primary" @onclick="Save" disabled="@saving">
+    <i class="bi bi-calendar-check"></i> @(saving ? "Saving..." : "Schedule Meeting")
+</button>
+
+@code {
+    private string title = "", link = "";
+    private DateTime start = NextHour();
+    private int duration = 30;
+    private bool saving;
+    private string? error;
+
+    private static DateTime NextHour()
+    {
+        var n = DateTime.Now.AddHours(1);
+        return new DateTime(n.Year, n.Month, n.Day, n.Hour, 0, 0);
+    }
+
+    private async Task Save()
+    {
+        error = null;
+        var t = title.Trim();
+        var l = link.Trim();
+
+        if (t.Length < 3) { error = "Give the meeting a title (at least 3 characters)."; return; }
+        if (!Uri.TryCreate(l, UriKind.Absolute, out var u) || u.Scheme != Uri.UriSchemeHttps)
+        { error = "Paste the full meeting link. It must start with https://"; return; }
+        if (duration is < 5 or > 480) { error = "Duration must be between 5 and 480 minutes."; return; }
+        if (start < DateTime.Now.AddMinutes(-5)) { error = "The start time can't be in the past."; return; }
+
+        saving = true;
+        try
+        {
+            await Svc.CreateAsync(new CreateMeetingRequest(
+                t, l, DateTime.SpecifyKind(start, DateTimeKind.Local).ToUniversalTime(), duration));
+            Nav.NavigateTo("/attendance");
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't schedule the meeting. Please try again."; }
+        finally { saving = false; }
+    }
+}

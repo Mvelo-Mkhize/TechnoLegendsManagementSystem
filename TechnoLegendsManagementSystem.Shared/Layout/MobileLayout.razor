@@ -1,0 +1,59 @@
+﻿@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Nav
+@inject ProfileService Profiles
+
+<div class="shell">
+    <header class="top-bar">
+        <div class="logo"><i class="bi bi-terminal"></i></div>
+        <div class="grow">
+            @if (Current.StartsWith("profile"))
+            {
+                <div class="muted bold" style="font-size:.65rem;letter-spacing:.5px">TECHNO LEGENDS</div>
+            }
+            <div class="bold">@Title</div>
+        </div>
+         <NotificationBell /> 
+        <a href="profile" class="avatar">@Initials</a>
+    </header>
+
+    <main class="content"><AppErrorBoundary>@Body</AppErrorBoundary></main>
+
+    <nav class="bottom-nav">
+        <NavLink href="home"><i class="bi bi-house"></i>Home</NavLink>
+        <NavLink href="chat"><i class="bi bi-chat-dots"></i>Chat</NavLink>
+        <NavLink href="attendance"><i class="bi bi-person-check"></i>Attendance</NavLink>
+        <NavLink href="tasks"><i class="bi bi-check2-circle"></i>Tasks</NavLink>
+        <NavLink href="profile"><i class="bi bi-person"></i>Profile</NavLink>
+    </nav>
+</div>
+
+@code {
+    private string Initials = "";
+
+    private string Current => Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
+
+    private string Title =>
+        Current.StartsWith("profile") ? "Profile" :
+        Current.StartsWith("attendance") ? "Attendance" :
+        Current.StartsWith("tasks") ? "Tasks" :
+        Current.StartsWith("chat") ? "Chat" :
+        Current.StartsWith("notifications") ? "Notifications" : "Home";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+        await LoadInitials();
+    }
+
+    private async Task LoadInitials()
+    {
+        try { Initials = Person.InitialsOf((await Profiles.GetAsync()).Name); }
+        catch { Initials = "?"; }
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _ = InvokeAsync(async () => { await LoadInitials(); StateHasChanged(); });
+
+    public void Dispose() => Nav.LocationChanged -= OnLocationChanged;
+}

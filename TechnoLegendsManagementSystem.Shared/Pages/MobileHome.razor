@@ -1,0 +1,136 @@
+﻿@page "/home" 
+@layout MobileLayout
+@attribute [Authorize]
+@inject ProfileService Profiles
+@inject ITaskService TaskSvc
+@inject IChatService Chat
+
+@if (loadError is not null)
+{
+    <div class="error">@loadError</div>
+}
+
+<div class="card">
+    <div class="row">
+        <div class="avatar">@Person.InitialsOf(user?.Name ?? "?")</div>
+        <div class="grow">
+            <div class="xs muted">Welcome back</div>
+            <div class="bold">@(Greeting + (user is null ? "" : ", " + FirstName))</div>
+        </div>
+    </div>
+    @if (user is not null)
+    {
+        <div class="chips mt">
+            @if (user.Department != "")
+            {
+                <span class="chip gray">@user.Department</span>
+            }
+            @if (user.Title != "")
+            {
+                <span class="chip gray">@user.Title</span>
+            }
+            @if (user.Role == "admin")
+            {
+                <span class="chip">Admin</span>
+            }
+        </div>
+    }
+</div>
+
+<div class="row between mb">
+    <span class="bold">Unread Channels <span class="chip gray">@unread.Count active</span></span>
+    <a href="/chat" class="xs bold">View all &rsaquo;</a>
+</div>
+@if (unread.Count == 0)
+{
+    <div class="xs muted mb">You're all caught up.</div>
+}
+<div class="row mb" style="align-items:stretch">
+    @foreach (var c in unread)
+    {
+        <a class="channel" href="/chat/@c.Id" style="display:block;text-decoration:none;color:inherit">
+            <div class="row between"><i class="bi bi-hash"></i><span class="chip">@c.Unread new</span></div>
+            <div class="xs bold" style="margin-top:6px">@c.Name</div>
+        </a>
+    }
+</div>
+
+<div class="row between mb">
+    <span class="bold">My tasks due soon <span class="chip gray">@myTasks.Count pending</span></span>
+    <a href="tasks" class="xs bold">See all tasks &rsaquo;</a>
+</div>
+@if (myTasks.Count == 0)
+{
+    <div class="xs muted mb">Nothing assigned to you right now.</div>
+}
+else
+{
+    <div class="card" style="padding-top:4px">
+        @foreach (var t in myTasks)
+        {
+            <a href="tasks/@t.Id" class="task" style="color:inherit">
+                <div class="checkbox"></div>
+                <div class="grow">
+                    <div class="row between">
+                        <span class="chip gray">@t.Department</span>
+                        <span class="chip @PriorityClass(t.Priority)">@t.Priority Priority</span>
+                    </div>
+                    <div class="sm bold" style="margin:6px 0 4px">@t.Title</div>
+                    <div class="xs muted"><i class="bi bi-clock"></i> @t.DueLabel</div>
+                </div>
+            </a>
+        }
+    </div>
+}
+
+<div class="card xs muted"><i class="bi bi-people"></i> @memberCount members in the workspace</div>
+
+@code {
+    private ProfileDto? user;
+    private List<ChannelDto> unread = new();
+    private List<TaskItem> myTasks = new();
+    private int memberCount;
+    private string? loadError;
+
+    private string Greeting => DateTime.Now.Hour switch { < 12 => "Good morning", < 18 => "Good afternoon", _ => "Good evening" };
+
+    private string FirstName
+    {
+        get
+        {
+            var n = user?.Name ?? "";
+            if (n.Contains('@')) n = n[..n.IndexOf('@')];
+            return n.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? n;
+        }
+    }
+
+    private static string PriorityClass(TaskPriority p) => p switch
+    {
+        TaskPriority.High => "red",
+        TaskPriority.Low => "gray",
+        _ => ""
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { user = await Profiles.GetAsync(); }
+        catch (ApiException ex) { loadError = ex.Message; }
+        catch (Exception) { loadError = "Couldn't load your profile."; }
+
+        try { unread = (await Chat.GetChannelsAsync()).Where(c => c.Unread > 0).ToList(); }
+        catch { /* card stays empty */ }
+
+        try
+        {
+            var all = await TaskSvc.GetTasksAsync();
+            myTasks = all
+                .Where(t => t.Status != WorkStatus.Done && user is not null
+                            && t.Assignees.Any(a => a.Person.Name == user.Name))
+                .OrderBy(t => t.Due).Take(3).ToList();
+        }
+        catch { /* card stays empty */ }
+
+        try { memberCount = (await Chat.GetPeopleAsync()).Count + 1; }
+        catch { }
+    }
+}

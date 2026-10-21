@@ -1,0 +1,135 @@
+﻿@page "/notifications"
+@layout StackLayout
+@using Microsoft.AspNetCore.Authorization
+@using TechnoLegendsManagementSystem.Shared.Models
+@using TechnoLegendsManagementSystem.Shared.Services
+@attribute [Authorize]
+@inject INotificationService Svc
+@inject NavigationManager Nav
+
+<div class="row between mb" style="align-items:flex-end">
+    <div>
+        <h1 class="h2">Notifications</h1>
+        @if (Svc.UnreadCount > 0)
+        {
+            <span class="chip">@Svc.UnreadCount New</span>
+        }
+    </div>
+    <button class="chip gray" @onclick="MarkAll" disabled="@(Svc.UnreadCount == 0)">
+        <i class="bi bi-check2-all"></i> Mark all read
+    </button>
+</div>
+
+<div class="filters">
+    @foreach (var (key, label) in tabs)
+    {
+        <button class="fchip @(tab == key ? "on" : "")" @onclick="() => tab = key">@label</button>
+    }
+</div>
+
+@if (error is not null)
+{
+    <div class="error">@error</div>
+}
+
+@if (loading)
+{
+    <div class="center muted mt">Loading...</div>
+}
+else
+{
+    var list = Visible.ToList();
+
+    if (list.Count == 0)
+    {
+        <div class="card center muted sm">You're all caught up. Nothing new here.</div>
+    }
+
+    foreach (var n in list)
+    {
+        <button class="notif @(n.IsRead ? "" : "unread")" @onclick="() => Open(n)">
+            <span class="nic @IconClass(n.Kind)"><i class="bi @Icon(n.Kind)"></i></span>
+            <div class="grow">
+                <div class="sm bold">@n.Title</div>
+                @if (n.Body != "")
+                {
+                    <div class="xs muted">@n.Body</div>
+                }
+                <div class="xs muted" style="margin-top:4px"><i class="bi bi-clock"></i> @Ago(n.CreatedAt)</div>
+            </div>
+            @if (!n.IsRead)
+            {
+                <span class="dot"></span>
+            }
+        </button>
+    }
+}
+
+@code {
+    private static readonly (string, string)[] tabs =
+    {
+        ("all", "All"), ("task", "Tasks"), ("meeting", "Meetings")
+    };
+
+    private List<NotificationDto> items = new();
+    private string tab = "all";
+    private string? error;
+    private bool loading = true;
+
+    private IEnumerable<NotificationDto> Visible => items.Where(n => tab == "all" || n.Kind == tab);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { items = await Svc.GetAsync(); }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load your notifications. Please try again."; }
+        loading = false;
+    }
+
+    private async Task Open(NotificationDto n)
+    {
+        try
+        {
+            if (!n.IsRead)
+            {
+                await Svc.MarkReadAsync(n.Id);
+                items = items.Select(x => x.Id == n.Id ? x with { IsRead = true } : x).ToList();
+            }
+        }
+        catch (ApiException ex) { error = ex.Message; return; }
+        catch (Exception) { /* still open the link */ }
+
+        if (!string.IsNullOrWhiteSpace(n.Link))
+            Nav.NavigateTo("/" + n.Link.TrimStart('/'));
+    }
+
+    private async Task MarkAll()
+    {
+        try
+        {
+            await Svc.MarkAllReadAsync();
+            items = items.Select(x => x with { IsRead = true }).ToList();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't mark them as read. Please try again."; }
+    }
+
+    private static string Icon(string kind) => kind switch
+    {
+        "task" => "bi-clipboard-check",
+        "meeting" => "bi-camera-video",
+        _ => "bi-bell"
+    };
+
+    private static string IconClass(string kind) => kind == "meeting" ? "green" : "";
+
+    private static string Ago(DateTime utc)
+    {
+        var s = DateTime.UtcNow - utc;
+        if (s.TotalMinutes < 1) return "just now";
+        if (s.TotalHours < 1) return $"{(int)s.TotalMinutes} min ago";
+        if (s.TotalDays < 1) return $"{(int)s.TotalHours} h ago";
+        if (s.TotalDays < 2) return "Yesterday";
+        return utc.ToLocalTime().ToString("MMM d");
+    }
+}

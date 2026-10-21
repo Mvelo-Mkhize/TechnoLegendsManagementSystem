@@ -1,0 +1,198 @@
+﻿@page "/chat" 
+@layout MobileLayout
+@attribute [Authorize]
+@using TechnoLegendsManagementSystem.Shared.Models
+@using TechnoLegendsManagementSystem.Shared.Services
+@implements IDisposable
+@inject IChatService Svc
+@inject ChatClient Live
+@inject NavigationManager Nav
+
+<div class="pg">
+
+    <div class="pg-searchrow">
+        <div class="pg-field">
+            <i class="bi bi-search"></i>
+            <input class="pg-input" placeholder="Search channels and messages" @bind="search" @bind:event="oninput" />
+        </div>
+    </div>
+
+    <div class="pg-seg">
+        @foreach (var t in tabs)
+        {
+            <button class="@(t == tab ? "on" : "")" @onclick="() => tab = t">@t</button>
+        }
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="pg-err"><span>@error</span><button class="pg-link" @onclick="Load">Retry</button></div>
+    }
+
+    @if (!loading && Live.State is "Reconnecting" or "Disconnected")
+    {
+        <div class="pg-conn">Live updates are @Live.State.ToLower(). Pull the list again with Retry if messages look stale.</div>
+    }
+
+    @if (showPeople)
+    {
+        <div class="pg-sec"><h3>Start a conversation</h3><button class="pg-link" @onclick="TogglePeople">Close</button></div>
+        @if (people is null)
+        {
+            <div class="pg-empty">Loading people…</div>
+        }
+        else if (people.Count == 0)
+        {
+            <div class="pg-empty">No one else has signed up yet.</div>
+        }
+        else
+        {
+            <div class="pg-list">
+                @foreach (var p in people)
+                {
+                    <button class="pg-item" @onclick="() => StartDm(p)">
+                        <span class="pg-av lg" style="background:@ChatUi.Color(p.Name)">@ChatUi.Initials(p.Name)</span>
+                        <div class="pg-item-main">
+                            <div class="pg-item-top"><b>@p.Name</b></div>
+                            <div class="pg-item-bot"><span class="pg-item-prev">@p.Title</span></div>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    }
+
+    @if (loading)
+    {
+        <div class="pg-empty">Loading chats…</div>
+    }
+    else
+    {
+        @if (tab is "All" or "Channels")
+        {
+            <div class="pg-sec">
+                <h3>Department Channels <span class="pg-count">@FChannels.Count()</span></h3>
+            </div>
+            @if (!FChannels.Any())
+            {
+                <div class="pg-empty">No channels found.</div>
+            }
+            <div class="pg-list">
+                @foreach (var c in FChannels)
+                {
+                    <a class="pg-item" href="/chat/@c.Id">
+                        <span class="pg-hash">#</span>
+                        <div class="pg-item-main">
+                            <div class="pg-item-top"><b>@c.Name</b><span class="pg-item-time">@(c.LastAt is null ? "" : ChatUi.TimeLabel(c.LastAt.Value))</span></div>
+                            <div class="pg-item-bot">
+                                <span class="pg-item-prev">@Preview(c)</span>
+                                @if (c.Unread > 0)
+                                {
+                                    <span class="pg-unread">@c.Unread</span>
+                                }
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+
+        @if (tab is "All" or "Direct Messages")
+        {
+            <div class="pg-sec">
+                <h3>Direct Messages <span class="pg-count">@FDms.Count()</span></h3>
+            </div>
+            @if (!FDms.Any())
+            {
+                <div class="pg-empty">No direct messages yet. Tap the button below to start one.</div>
+            }
+            <div class="pg-list">
+                @foreach (var d in FDms)
+                {
+                    <a class="pg-item" href="/chat/@d.Id">
+                        <span class="pg-av lg" style="background:@ChatUi.Color(d.Name)">@ChatUi.Initials(d.Name)</span>
+                        <div class="pg-item-main">
+                            <div class="pg-item-top"><b>@d.Name</b><span class="pg-item-time">@(d.LastAt is null ? "" : ChatUi.TimeLabel(d.LastAt.Value))</span></div>
+                            <div class="pg-item-bot">
+                                <span class="pg-item-prev">@Preview(d)</span>
+                                @if (d.Unread > 0)
+                                {
+                                    <span class="pg-unread">@d.Unread</span>
+                                }
+                            </div>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    }
+
+    <button class="pg-fab" @onclick="TogglePeople" title="New message"><i class="bi bi-chat-square-text"></i></button>
+</div>
+
+@code {
+    List<ChannelDto> channels = new();
+    List<PersonDto>? people;
+    string? error;
+    bool loading = true, showPeople;
+    string search = "";
+    string tab = "All";
+    string[] tabs = { "All", "Channels", "Direct Messages" };
+
+    bool Match(ChannelDto c) =>
+        string.IsNullOrWhiteSpace(search) ||
+        (c.Name + " " + c.LastText).Contains(search, StringComparison.OrdinalIgnoreCase);
+
+    IEnumerable<ChannelDto> FChannels => channels.Where(c => c.Kind != "dm" && Match(c));
+    IEnumerable<ChannelDto> FDms => channels.Where(c => c.Kind == "dm" && Match(c));
+
+    static string Preview(ChannelDto c) =>
+        c.LastText is null ? "No messages yet" : c.Kind == "dm" ? c.LastText : $"{c.LastSender}: {c.LastText}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Live.MessageReceived += OnMessage;
+        Live.StateChanged += OnState;
+        await Load();
+        try { await Live.EnsureStartedAsync(); } catch { /* REST still works; the banner shows the state */ }
+    }
+
+    async Task Load()
+    {
+        try { channels = await Svc.GetChannelsAsync(); error = null; }
+        catch (ChatException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load your chats. Please try again."; }
+        loading = false;
+    }
+
+    void OnMessage(MessageDto m) => _ = InvokeAsync(async () => { await Load(); StateHasChanged(); });
+    void OnState() => _ = InvokeAsync(StateHasChanged);
+
+    async Task TogglePeople()
+    {
+        showPeople = !showPeople;
+        if (showPeople && people is null)
+        {
+            try { people = await Svc.GetPeopleAsync(); }
+            catch (ChatException ex) { error = ex.Message; showPeople = false; }
+            catch (Exception) { error = "Couldn't load people."; showPeople = false; }
+        }
+    }
+
+    async Task StartDm(PersonDto p)
+    {
+        try
+        {
+            var id = await Svc.StartDmAsync(p.Id);
+            Nav.NavigateTo($"/chat/{id}");
+        }
+        catch (ChatException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't start that conversation."; }
+    }
+
+    public void Dispose()
+    {
+        Live.MessageReceived -= OnMessage;
+        Live.StateChanged -= OnState;
+    }
+}

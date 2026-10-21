@@ -5,4 +5,5 @@
   <Project Path="TechnoLegendsManagementSystem/TechnoLegendsManagementSystem.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
+  <Project Path="TechnoLegendsMobile.Api/TechnoLegendsMobile.Api.csproj" />
 </Solution>

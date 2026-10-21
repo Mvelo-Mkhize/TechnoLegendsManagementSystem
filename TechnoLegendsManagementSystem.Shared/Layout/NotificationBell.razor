@@ -1,0 +1,44 @@
+﻿@implements IDisposable
+@inject INotificationService Svc
+@inject NavigationManager Nav
+
+<a href="notifications" class="bell" aria-label="Notifications">
+    <i class="bi bi-bell"></i>
+    @if (count > 0)
+    {
+        <span class="bell-badge">@(count > 9 ? "9+" : count.ToString())</span>
+    }
+</a>
+
+@code {
+    private int count;
+    private System.Threading.Timer? timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Svc.Changed += OnChanged;
+        Nav.LocationChanged += OnLocation;
+        await Refresh();
+        timer = new System.Threading.Timer(_ => Poll(), null, 30000, 30000);
+    }
+
+    private async Task Refresh()
+    {
+        try { await Svc.RefreshCountAsync(); count = Svc.UnreadCount; }
+        catch { /* keep the last count */ }
+    }
+
+    private Task Poll() => InvokeAsync(async () => { await Refresh(); StateHasChanged(); });
+
+    private void OnChanged() => _ = InvokeAsync(() => { count = Svc.UnreadCount; StateHasChanged(); });
+
+    private void OnLocation(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        => _ = Poll();
+
+    public void Dispose()
+    {
+        Svc.Changed -= OnChanged;
+        Nav.LocationChanged -= OnLocation;
+        timer?.Dispose();
+    }
+}

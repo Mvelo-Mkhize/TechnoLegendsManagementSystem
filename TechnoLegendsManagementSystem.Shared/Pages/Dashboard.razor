@@ -1,6 +1,7 @@
 ﻿@page "/"
 @attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Authorization 
+@inject NavigationManager Nav
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -116,7 +117,14 @@
     </div>
 </div>
 
-@code {
+@code { 
+    protected override void OnInitialized()
+    {
+        if (OperatingSystem.IsAndroid())
+            Nav.NavigateTo("/home", replace: true);
+    } 
+     
+
     private record Velocity(string Icon, string Name, int Percent, string Detail);
     private record DocItem(string Name, string Detail, string Dept, string Author);
 
