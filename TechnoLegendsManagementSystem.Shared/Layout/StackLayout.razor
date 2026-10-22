@@ -1,0 +1,25 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject ProfileService Profiles
+
+<div class="shell">
+    <header class="top-bar">
+        <button class="row sm bold" @onclick='() => Nav.NavigateTo("/tasks")'>
+            <i class="bi bi-arrow-left"></i> Back to Tasks
+        </button>
+        <div class="grow"></div>
+         <NotificationBell />
+        <a href="profile" class="avatar">@Initials</a>
+    </header>
+    <main class="content flush"><AppErrorBoundary>@Body</AppErrorBoundary></main>
+</div>
+
+@code {
+    private string Initials = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { Initials = Person.InitialsOf((await Profiles.GetAsync()).Name); }
+        catch { Initials = "?"; }
+    }
+}

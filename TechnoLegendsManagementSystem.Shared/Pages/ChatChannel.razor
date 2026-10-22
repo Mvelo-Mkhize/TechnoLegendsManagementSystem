@@ -1,0 +1,250 @@
+﻿@page "/chat/{ChannelId:long}" 
+@layout MobileLayout
+@attribute [Authorize]
+@using TechnoLegendsManagementSystem.Shared.Models
+@using TechnoLegendsManagementSystem.Shared.Services
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@implements IDisposable
+@inject IChatService Svc
+@inject ChatClient Live
+@inject IJSRuntime JS
+
+<div class="pg">
+
+    <div class="pg-chat-head">
+        <a class="pg-sq" href="/chat"><i class="bi bi-arrow-left"></i></a>
+        <div class="t">
+            <b>@Title</b>
+            <small>@Subtitle</small>
+        </div>
+        <a class="pg-meet" href="/chat/meeting"><i class="bi bi-camera-video"></i> Meet</a>
+    </div>
+
+    @if (error is not null)
+    {
+        <div class="pg-err"><span>@error</span><button class="pg-link" @onclick="Load">Retry</button></div>
+    }
+
+    @if (!loading && Live.State is "Reconnecting" or "Disconnected")
+    {
+        <div class="pg-conn"><span>Live updates are @Live.State.ToLower().</span> <button class="pg-link" @onclick="Resync">Refresh</button></div>
+    }
+
+    @if (loading)
+    {
+        <div class="pg-empty">Loading messages…</div>
+    }
+    else if (channel is not null)
+    {
+        if (canLoadMore)
+        {
+            <button class="pg-more" @onclick="LoadOlder">Load earlier messages</button>
+        }
+        if (messages.Count == 0)
+        {
+            <div class="pg-empty">No messages yet. Say hello 👋</div>
+        }
+
+        DateTime? lastDay = null;
+        foreach (var m in messages)
+        {
+            var day = m.CreatedAt.ToLocalTime().Date;
+            if (lastDay != day)
+            {
+                <div class="pg-day">@ChatUi.DayLabel(day)</div>
+                lastDay = day;
+            }
+            var mine = m.SenderId == me?.Id;
+
+            <div class="pg-msg @(mine ? "mine" : "")">
+                @if (!mine)
+                {
+                    <span class="pg-av sm" style="background:@ChatUi.Color(m.SenderName)">@ChatUi.Initials(m.SenderName)</span>
+                }
+                <div class="pg-msg-body">
+                    <div class="pg-msg-meta">
+                        @if (mine)
+                        {
+                            <span>@m.CreatedAt.ToLocalTime().ToString("h:mm tt")</span> <b>You</b>
+                        }
+                        else
+                        {
+                            <b>@m.SenderName</b>
+                            @if (!string.IsNullOrEmpty(m.SenderTitle))
+                            {
+                                <span class="pg-mini">@m.SenderTitle</span>
+                            }
+                            <span>@m.CreatedAt.ToLocalTime().ToString("h:mm tt")</span>
+                        }
+                    </div>
+                    <div class="pg-bubble">@m.Text</div>
+                </div>
+            </div>
+        }
+
+        <div class="pg-composer">
+            @if (sendError is not null)
+            {
+                <div class="pg-err"><span>@sendError</span></div>
+            }
+            <div class="pg-compose-row">
+                <div class="pg-compose-in">
+                    <input placeholder="Message @Title" maxlength="4000" disabled="@sending"
+                           @bind="draft" @bind:event="oninput" @onkeydown="OnKey" />
+                </div>
+                <button class="pg-send" @onclick="Send" disabled="@(sending || string.IsNullOrWhiteSpace(draft))">
+                    <i class="bi bi-send"></i>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    const int PageSize = 50;
+
+    [Parameter] public long ChannelId { get; set; }
+
+    ChannelDto? channel;
+    PersonDto? me;
+    List<MessageDto> messages = new();
+    string? error, sendError;
+    string draft = "";
+    string lastState = "Connected";
+    bool loading = true, sending, canLoadMore, scrollPending;
+    long loadedId;
+
+    string Title => channel is null ? "Chat" : channel.Kind == "dm" ? channel.Name : "#" + channel.Name;
+    string Subtitle => channel is null ? "" : channel.Kind == "dm" ? "Direct message" : $"{channel.Members} members";
+
+    protected override void OnInitialized()
+    {
+        Live.MessageReceived += OnMessage;
+        Live.StateChanged += OnState;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedId == ChannelId) return;
+        loadedId = ChannelId;
+        try { await Live.EnsureStartedAsync(); } catch { /* banner shows state; REST still works */ }
+        await Load();
+    }
+
+    async Task Load()
+    {
+        loading = true; error = null; sendError = null; channel = null; messages = new();
+        try
+        {
+            me = await Svc.GetMeAsync();
+            var all = await Svc.GetChannelsAsync();
+            channel = all.FirstOrDefault(c => c.Id == ChannelId);
+            if (channel is null)
+            {
+                error = "This chat doesn't exist or you're not a member.";
+                return;
+            }
+            messages = await Svc.GetMessagesAsync(ChannelId);
+            canLoadMore = messages.Count >= PageSize;
+            await SafeMarkRead();
+            scrollPending = true;
+        }
+        catch (ChatException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load this chat. Please try again."; }
+        finally { loading = false; }
+    }
+
+    async Task LoadOlder()
+    {
+        if (messages.Count == 0) return;
+        try
+        {
+            var older = await Svc.GetMessagesAsync(ChannelId, messages[0].Id);
+            canLoadMore = older.Count >= PageSize;
+            messages.InsertRange(0, older);
+        }
+        catch (ChatException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load earlier messages."; }
+    }
+
+    async Task Send()
+    {
+        var text = draft.Trim();
+        if (text.Length == 0 || sending) return;
+        if (text.Length > 4000) { sendError = "Messages can be up to 4000 characters."; return; }
+
+        sending = true; sendError = null;
+        try
+        {
+            var dto = await Svc.SendAsync(ChannelId, text);
+            AddIfNew(dto);
+            draft = "";
+            scrollPending = true;
+        }
+        catch (ChatException ex) { sendError = ex.Message; }
+        catch (Exception) { sendError = "Your message couldn't be sent. Please try again."; }
+        finally { sending = false; }
+    }
+
+    async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey) await Send();
+    }
+
+    void AddIfNew(MessageDto m)
+    {
+        if (messages.Any(x => x.Id == m.Id)) return;
+        messages.Add(m);
+    }
+
+    async Task SafeMarkRead()
+    {
+        try { await Svc.MarkReadAsync(ChannelId); } catch { /* not critical */ }
+    }
+
+    void OnMessage(MessageDto m) => _ = InvokeAsync(async () =>
+    {
+        if (m.ChannelId != ChannelId || channel is null) return;
+        AddIfNew(m);
+        scrollPending = true;
+        if (m.SenderId != me?.Id) await SafeMarkRead();
+        StateHasChanged();
+    });
+
+    void OnState() => _ = InvokeAsync(async () =>
+    {
+        var s = Live.State;
+        var recovered = s == "Connected" && lastState != "Connected";
+        lastState = s;
+        if (recovered && channel is not null) await Resync();
+        StateHasChanged();
+    });
+
+    // fetch anything missed while the connection was down
+    async Task Resync()
+    {
+        try
+        {
+            var latest = await Svc.GetMessagesAsync(ChannelId);
+            foreach (var m in latest) AddIfNew(m);
+            messages = messages.OrderBy(x => x.Id).ToList();
+            scrollPending = true;
+        }
+        catch { /* the banner stays; user can tap Refresh again */ }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!scrollPending) return;
+        scrollPending = false;
+        try { await JS.InvokeVoidAsync("eval", "document.querySelector('.pg-composer')?.scrollIntoView({block:'end'})"); }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        Live.MessageReceived -= OnMessage;
+        Live.StateChanged -= OnState;
+    }
+}

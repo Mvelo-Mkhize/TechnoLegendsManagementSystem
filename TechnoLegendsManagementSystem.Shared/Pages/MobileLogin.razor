@@ -1,64 +1,62 @@
 ﻿@page "/mobile-login"
-@layout EmptyLayout
+@layout MobileAuthLayout
 @attribute [AllowAnonymous]
+@using System.ComponentModel.DataAnnotations
 
-<div class="mobile-login-container">
-    <div class="mobile-brand">
-        <div class="logo-box"><span>TLMS</span></div>
-        <h2>Techno Legends</h2>
-        <p>Organization Management System • Member Sign In</p>
+<div class="auth-card">
+    <div class="center mb">
+        <div class="brand-icon"><i class="bi bi-terminal"></i></div>
+        <h3>Techno Legends</h3>
+        <p class="muted xs" style="margin-top:4px">Organization Management System &bull; Member Sign In</p>
     </div>
 
-    <div class="mobile-login-card">
-        <EditForm Model="Model" OnValidSubmit="HandleLoginAsync">
-            <DataAnnotationsValidator />
-            <div class="form-group">
-                <label>Email address</label>
-                <div class="input-icon-wrapper">
-                    <span class="input-icon">📧</span>
-                    <InputText @bind-Value="Model.Email" class="form-control with-icon" placeholder="name@technolegends.org" />
-                </div>
-                <ValidationMessage For="@(() => Model.Email)" />
-            </div>
-            <div class="form-group">
-                <div class="label-row"><label>Password</label><a href="#" class="forgot-link">Forgot password?</a></div>
-                <div class="input-icon-wrapper">
-                    <span class="input-icon">🔒</span>
-                    <InputText @bind-Value="Model.Password" type="password" class="form-control with-icon" placeholder="Enter your password" />
-                </div>
-                <ValidationMessage For="@(() => Model.Password)" />
-            </div>
-            <button type="submit" class="btn btn-primary btn-block" disabled="@IsLoading">
-                @if (IsLoading)
-                {
-                    <span class="spinner-border spinner-border-sm"></span>
-                }
-                else
-                {
-
-                    <span>→ Log in</span>
-                }
-            </button>
-        </EditForm>
-
-        <button class="btn btn-outline-secondary btn-block passkey-btn" @onclick="HandlePasskeyLoginAsync">
-            🔑 Sign in with Passkey / Face ID
-        </button>
+    <EditForm Model="Model" OnValidSubmit="HandleLoginAsync">
+        <DataAnnotationsValidator />
 
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
-            <div class="alert alert-danger mt-3">@ErrorMessage</div>
+            <div class="error">@ErrorMessage</div>
         }
+
+        <div class="field">
+            <label>Email address</label>
+            <div class="input-wrap">
+                <i class="bi bi-envelope"></i>
+                <InputText @bind-Value="Model.Email" placeholder="name@technolegends.org" />
+            </div>
+            <ValidationMessage For="@(() => Model.Email)" />
+        </div>
+
+        <div class="field">
+            <div class="row between">
+                <label>Password</label>
+                <a href="javascript:void(0)" class="xs bold">Forgot password?</a>
+            </div>
+            <div class="input-wrap">
+                <i class="bi bi-lock"></i>
+                <InputText @bind-Value="Model.Password" type="@(show ? "text" : "password")" placeholder="Enter your password" />
+                <button type="button" class="toggle" @onclick="() => show = !show">@(show ? "Hide" : "Show")</button>
+            </div>
+            <ValidationMessage For="@(() => Model.Password)" />
+        </div>
+
+        <button type="submit" class="btn btn-primary" disabled="@IsLoading">
+            <i class="bi bi-box-arrow-in-right"></i> @(IsLoading ? "Signing in..." : "Log in")
+        </button>
+
+        <button type="button" class="btn btn-outline mt" @onclick="HandlePasskeyLoginAsync">
+            <i class="bi bi-fingerprint"></i> Sign in with Passkey / Face ID
+        </button>
+    </EditForm>
+
+    <div class="info-banner mt">
+        <div class="bold" style="color:var(--text)"><i class="bi bi-shield-check"></i> Authorized Directory Gateway</div>
+        Access for 5 departments: Upper Management, BA, Design, Dev, Marketing.
     </div>
 
-    <div class="directory-gateway-info">
-        <div class="gateway-header"><span>🛡</span><strong>Authorized Directory Gateway</strong></div>
-        <p>Access for 5 departments: Upper Management, BA, Design, Dev, Marketing.</p>
-    </div>
-
-    <div class="mobile-footer">
-        <span>IT Support Desk • Security Policy</span>
-        <small>Techno Legends Inc. © 2025</small>
+    <div class="center xs muted mt">
+        IT Support Desk &bull; Security Policy
+        <div>Techno Legends Inc. &copy; 2025</div>
     </div>
 </div>
 
@@ -69,6 +67,7 @@
 
     private LoginModel Model { get; set; } = new();
     private bool IsLoading { get; set; }
+    private bool show;
     private string? ErrorMessage { get; set; }
 
     private async Task HandleLoginAsync()

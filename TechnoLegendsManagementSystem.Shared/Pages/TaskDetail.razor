@@ -1,0 +1,223 @@
+﻿@page "/tasks/{Id}" 
+@attribute [Authorize]
+@layout StackLayout
+@inject ITaskService Svc
+@inject ProfileService Profiles
+
+@if (task is null)
+{
+    <div class="center muted mt">@(loading ? "Loading..." : "Task not found.")</div>
+}
+else
+{
+    <div class="row between mb">
+        <span class="xs bold" style="color:var(--blue)">@task.Sprint / @task.Epic</span>
+        <span class="chip gray">#@task.Id</span>
+    </div>
+
+    <div class="row mb">
+        <span class="chip" style="padding:5px 12px">@StatusLabel <i class="bi bi-chevron-down"></i></span>
+        <span class="chip @PriClass" style="padding:5px 12px"><i class="bi bi-flag-fill"></i> @task.Priority Priority</span>
+    </div>
+
+    <h1 class="h2">@task.Title</h1>
+    @if (task.Description != "")
+    {
+        <p class="muted sm" style="margin:8px 0 12px">@task.Description</p>
+    }
+
+    @if (task.Scope.Count > 0)
+    {
+        <div class="card">
+            <div class="row between mb">
+                <span class="xs bold muted">SCOPE ACCEPTANCE</span>
+                <span class="xs bold" style="color:var(--blue)">@(task.Scope.Count(x => x.Done))/@task.Scope.Count completed</span>
+            </div>
+            @foreach (var x in task.Scope)
+            {
+                <div class="row" style="margin-bottom:8px;align-items:flex-start">
+                    <span class="check @(x.Done ? "on" : "")">
+                        @if (x.Done)
+                        {
+                            <i class="bi bi-check"></i>
+                        }
+                    </span>
+                    <span class="sm @(x.Done ? "strike" : "")">@x.Text</span>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="tile-grid mb">
+        <div class="tile">
+            <div class="xs muted bold">Department</div>
+            <span class="chip" style="margin-top:6px"><i class="bi bi-code-slash"></i> @task.Department</span>
+        </div>
+        <div class="tile">
+            <div class="xs muted bold">Linked Epic</div>
+            <div class="sm bold" style="margin-top:6px"><i class="bi bi-diagram-3"></i> @task.Epic</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="xs muted bold mb">Due Date &amp; Deadline</div>
+        <div class="row between">
+            <span class="sm bold"><i class="bi bi-calendar-event"></i> @task.Due.ToString("ddd, MMM dd • h:mm tt")</span>
+            <span class="chip red">@DueIn</span>
+        </div>
+        <div class="row mt">
+            <span class="chip gray">@task.Points Story Points</span>
+            <span class="chip gray">@task.Sprint</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="xs muted bold mb">Assignees (@task.Assignees.Count)</div>
+        @foreach (var a in task.Assignees)
+        {
+            <div class="row" style="margin-bottom:10px">
+                <div class="avatar">@a.Person.Initials</div>
+                <div class="grow">
+                    <div class="sm bold">@a.Person.Name@(a.Person.Name == CurrentUser.Name ? " (You)" : "")</div>
+                    <div class="xs muted">@a.Person.Title</div>
+                </div>
+                <span class="chip gray">@a.Role</span>
+            </div>
+        }
+        <div class="xs muted">Reporter: <span class="bold" style="color:var(--text)">@task.Reporter.Name</span> (@task.Reporter.Title)</div>
+    </div>
+
+    @if (task.Subtasks.Count > 0)
+    {
+        <div class="card">
+            <div class="row between mb">
+                <span class="card-title"><i class="bi bi-list-check"></i> Subtasks</span>
+                <span class="xs bold" style="color:var(--blue)">@task.SubtasksDone of @task.Subtasks.Count (@task.Progress%)</span>
+            </div>
+            <div class="bar mb"><div style="width:@(task.Progress)%"></div></div>
+            @foreach (var s in task.Subtasks)
+            {
+                <div class="row sm" style="margin-bottom:8px">
+                    <i class="bi @(s.Done ? "bi-check-circle-fill" : "bi-circle")" style="color:@(s.Done ? "var(--green)" : "var(--blue)")"></i>
+                    <span class="grow @(s.Done ? "strike" : "bold")">@s.Title</span>
+                    @if (s.Done)
+                    {
+                        <span class="xs muted">@s.When</span>
+                    }
+                    else
+                    {
+
+                        <span class="chip">Active</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    @if (task.Attachments.Count > 0)
+    {
+        <div class="card">
+            <div class="row between mb">
+                <span class="card-title"><i class="bi bi-paperclip"></i> Attachments <span class="chip gray">@task.Attachments.Count</span></span>
+                <button class="chip dark"><i class="bi bi-plus"></i> Add File</button>
+            </div>
+            @foreach (var f in task.Attachments)
+            {
+                <div class="row" style="margin-bottom:8px">
+                    <div class="file-ico"><i class="bi @FileIcon(f.Name)"></i></div>
+                    <div class="grow">
+                        <div class="sm bold" style="word-break:break-all">@f.Name</div>
+                        <div class="xs muted">@f.Meta</div>
+                    </div>
+                    <i class="bi bi-download muted"></i>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="card">
+        <div class="row between mb">
+            <span class="card-title"><i class="bi bi-chat-dots"></i> Activity &amp; Discussion</span>
+            <span class="chip gray">@task.Comments.Count Updates</span>
+        </div>
+        @foreach (var c in task.Comments)
+        {
+            <div class="row" style="align-items:flex-start;margin-bottom:12px">
+                <div class="avatar sm" style="margin:0;width:30px;height:30px">@Person.InitialsOf(c.Author)</div>
+                <div class="grow">
+                    <div class="row xs" style="margin-bottom:4px">
+                        <span class="bold">@c.Author</span>
+                        <span class="chip @(c.IsMe ? "" : "gray")">@c.Role</span>
+                        <span class="muted">@c.When</span>
+                    </div>
+                    <div class="bubble sm @(c.IsMe ? "me" : "")">@c.Text</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="composer">
+        <input @bind="newComment" @bind:event="oninput" @onkeydown="OnKey" placeholder="Write an update or mention @@..." />
+        <button class="send" @onclick="Send"><i class="bi bi-send"></i></button>
+    </div>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = "";
+
+    private TaskItem? task;
+    private bool loading = true;
+    private string newComment = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        try { await Profiles.GetAsync(); } catch { /* only used for the "(You)" label */ }
+        task = await Svc.GetTaskAsync(Id);
+        loading = false;
+    }
+
+    private string StatusLabel => task!.Status switch
+    {
+        WorkStatus.ToDo => "To Do",
+        WorkStatus.Done => "Done",
+        _ => "In Progress"
+    };
+
+    private string PriClass => task!.Priority switch
+    {
+        TaskPriority.High => "red",
+        TaskPriority.Low => "gray",
+        _ => ""
+    };
+
+    private string DueIn
+    {
+        get
+        {
+            var span = task!.Due - DateTime.Now;
+            if (span.TotalMinutes < 0) return "Overdue";
+            return span.TotalHours < 48 ? $"Due in {(int)span.TotalHours} hrs" : $"Due in {(int)span.TotalDays} days";
+        }
+    }
+
+    private static string FileIcon(string name) => name.ToLower() switch
+    {
+        var n when n.EndsWith(".pdf") => "bi-file-earmark-pdf",
+        var n when n.EndsWith(".png") || n.EndsWith(".jpg") => "bi-image",
+        _ => "bi-file-earmark"
+    };
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Send();
+    }
+
+    private async Task Send()
+    {
+        if (task is null || string.IsNullOrWhiteSpace(newComment)) return;
+        await Svc.AddCommentAsync(task.Id, newComment.Trim());
+        newComment = "";
+        task = await Svc.GetTaskAsync(Id);
+    }
+}

@@ -1,0 +1,144 @@
+﻿@page "/profile" 
+@layout MobileLayout 
+@attribute [Authorize]
+@inject NavigationManager Nav
+@inject IAuthService Auth
+@inject ProfileService Profiles
+@inject ITaskService TaskSvc
+@inject ChatClient Live
+
+@if (error is not null)
+{
+    <div class="error">@error</div>
+}
+
+@if (me is not null)
+{
+    <div class="card">
+        <div class="row" style="align-items:flex-start">
+            <div class="avatar lg">@Person.InitialsOf(me.Name)</div>
+            <div class="grow">
+                <div class="bold" style="font-size:1.1rem">@me.Name</div>
+                @if (me.Department != "")
+                {
+                    <span class="chip dark" style="margin-top:6px">@me.Department</span>
+                }
+            </div>
+        </div>
+        <div class="info-banner mt xs">
+            <div><i class="bi bi-envelope"></i> @me.Email</div>
+            @if (me.Title != "")
+            {
+                <div><i class="bi bi-briefcase"></i> @me.Title</div>
+            }
+            @if (me.Role == "admin")
+            {
+                <div><i class="bi bi-shield-check"></i> Administrator</div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <span class="card-title">Teams &amp; Active Projects <span class="chip gray">@Projects.Count()</span></span>
+        </div>
+        @if (!Projects.Any())
+        {
+            <div class="xs muted">Projects appear here when you're assigned tasks.</div>
+        }
+        <div class="chips">
+            @foreach (var p in Projects)
+            {
+                <span class="chip gray">@p</span>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <div>
+                <div class="card-title">Task &amp; Deliverables</div>
+                <div class="xs muted">Assigned to you</div>
+            </div>
+            <a href="tasks" class="xs bold">Backlog &rsaquo;</a>
+        </div>
+        <div class="stats three">
+            <div class="stat"><b>@Count(WorkStatus.InProgress)</b><small>In Progress</small></div>
+            <div class="stat"><b>@Count(WorkStatus.Done)</b><small>Completed</small></div>
+            <div class="stat"><b>@mine.Count</b><small>Assigned</small></div>
+        </div>
+
+        @if (Focus is { } f)
+        {
+            <a href="tasks/@f.Id" class="info-banner info-blue mt" style="display:block;color:inherit">
+                <div class="row between">
+                    <span class="xs bold" style="color:var(--blue)">PRIORITY FOCUS</span>
+                    <span class="chip @(f.DueSoon ? "red" : "gray")">@f.DueLabel</span>
+                </div>
+                <div class="sm bold" style="color:var(--text);margin:4px 0 8px">@f.Title</div>
+                @if (f.Subtasks.Count > 0)
+                {
+                    <div class="row between xs"><span>Subtasks Completed</span><span class="bold">@f.SubtasksDone of @f.Subtasks.Count (@f.Progress%)</span></div>
+                    <div class="bar" style="margin-top:4px"><div style="width:@(f.Progress)%"></div></div>
+                }
+            </a>
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-title mb">Account Settings</div>
+        @foreach (var s in settings)
+        {
+            <div class="list-row">
+                <i class="bi @s.Icon"></i>
+                <div class="grow">
+                    <div class="sm bold">@s.Title</div>
+                    <div class="xs muted">@s.Sub</div>
+                </div>
+                <i class="bi bi-chevron-right muted"></i>
+            </div>
+        }
+        <button class="btn btn-danger mt" @onclick="SignOut"><i class="bi bi-box-arrow-right"></i> Log Out of Session</button>
+    </div>
+}
+
+@code {
+    private static readonly (string Icon, string Title, string Sub)[] settings =
+    {
+        ("bi-bell", "Notifications", "Push, meeting alerts, task mentions"),
+        ("bi-shield-lock", "Security & Credentials", "Authenticator app 2FA active"),
+        ("bi-palette", "Appearance & Display", "Light theme")
+    };
+
+    private ProfileDto? me;
+    private List<TaskItem> mine = new();
+    private string? error;
+
+    private IEnumerable<string> Projects => mine.Select(t => t.Project).Where(p => p != "").Distinct();
+    private int Count(WorkStatus s) => mine.Count(t => t.Status == s);
+    private TaskItem? Focus => mine.Where(t => t.Status != WorkStatus.Done)
+                                   .OrderBy(t => t.Priority).ThenBy(t => t.Due).FirstOrDefault();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { me = await Profiles.GetAsync(); }
+        catch (ApiException ex) { error = ex.Message; return; }
+        catch (Exception) { error = "Couldn't load your profile."; return; }
+
+        try
+        {
+            var all = await TaskSvc.GetTasksAsync();
+            mine = all.Where(t => t.Assignees.Any(a => a.Person.Name == me.Name)).ToList();
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load your tasks."; }
+    }
+
+    private async Task SignOut()
+    {
+        try { await Live.StopAsync(); } catch { }
+        await Auth.SignOutAsync();
+        Profiles.Clear();
+        Nav.NavigateTo("/mobile-login", forceLoad: true);
+    }
+}

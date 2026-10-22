@@ -1,0 +1,212 @@
+﻿@page "/attendance"
+@layout MobileLayout
+@attribute [Authorize]
+@implements IDisposable
+@inject IMeetingService Svc
+@inject NavigationManager Nav
+
+<div class="row between mb">
+    <div>
+        <div class="eyebrow">Attendance Registry</div>
+        <h1 class="h2">Meetings</h1>
+    </div>
+    <a href="attendance/new" class="btn-dark"><i class="bi bi-plus-lg"></i> New</a>
+</div>
+
+@if (error is not null)
+{
+    <div class="error">@error</div>
+}
+
+@if (loading)
+{
+    <div class="center muted mt">Loading meetings...</div>
+}
+else
+{
+    <div class="card-title mb">Upcoming</div>
+
+    @if (data.Upcoming.Count == 0)
+    {
+        <div class="card muted sm">No upcoming meetings. Tap New to schedule one.</div>
+    }
+
+    @foreach (var m in data.Upcoming)
+    {
+        var open = IsOpen(m);
+        var done = m.MyStatus is "OnTime" or "Late";
+
+        <div class="card">
+            <div class="row between">
+                <span class="chip @(Live(m) ? "green" : "gray")">@(Live(m) ? "● Live now" : "Upcoming")</span>
+                <span class="xs muted">@m.CheckedIn checked in</span>
+            </div>
+            <div class="bold mt" style="font-size:1.05rem">@m.Title</div>
+            <div class="xs muted" style="margin:4px 0 12px">
+                <i class="bi bi-clock"></i> @When(m) &bull; Host: @m.HostName
+            </div>
+            @if (done)
+            {
+                <span class="chip green"><i class="bi bi-check-circle"></i> Checked in</span>
+            }
+            <button class="btn btn-primary mt" disabled="@(!open || busyId is not null)" @onclick="() => CheckIn(m)">
+                @if (busyId == m.Id)
+                {
+                    <span>Checking in...</span>
+                }
+                else if (!open)
+                {
+                    <span><i class="bi bi-lock"></i> Check-in opens @OpensAt(m)</span>
+                }
+                else if (done)
+                {
+                    <span><i class="bi bi-camera-video"></i> Rejoin in Teams</span>
+                }
+                else
+                {
+                    <span><i class="bi bi-hand-index-thumb"></i> Check In &amp; Join</span>
+                }
+            </button>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-head">
+            <span class="card-title">My Attendance</span>
+            <span class="chip @(Rate >= 90 ? "green" : "gray")">@RateText</span>
+        </div>
+        <div class="stats three">
+            <div class="stat"><b>@data.Summary.OnTime</b><small>On time</small></div>
+            <div class="stat"><b>@data.Summary.Late</b><small>Late</small></div>
+            <div class="stat"><b>@data.Summary.Missed</b><small>Missed</small></div>
+        </div>
+        <div class="xs muted mt">Based on the last @data.Summary.Total finished meetings. Target: 90%.</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title mb">Past Meetings <span class="chip gray">@data.Past.Count</span></div>
+
+        @if (data.Past.Count == 0)
+        {
+            <div class="xs muted">No finished meetings yet.</div>
+        }
+
+        @foreach (var m in data.Past)
+        {
+            <button class="list-row" style="width:100%;text-align:left" @onclick="() => Toggle(m)">
+                <div class="grow">
+                    <div class="sm bold">@m.Title</div>
+                    <div class="xs muted">@When(m) &bull; @m.CheckedIn attended</div>
+                </div>
+                <span class="chip @StatusClass(m.MyStatus)">@StatusLabel(m.MyStatus)</span>
+            </button>
+
+            @if (expanded == m.Id)
+            {
+                <div style="padding:0 0 10px">
+                    @if (attendees is null)
+                    {
+                        <div class="xs muted">Loading...</div>
+                    }
+                    else if (attendees.Count == 0)
+                    {
+                        <div class="xs muted">No one checked in.</div>
+                    }
+                    else
+                    {
+                        @foreach (var a in attendees)
+                        {
+                            <div class="row xs" style="margin-bottom:6px">
+                                <div class="avatar sm" style="margin:0">@Person.InitialsOf(a.Name)</div>
+                                <span class="grow">@a.Name</span>
+                                <span class="muted">@a.JoinedAt.ToLocalTime().ToString("h:mm tt")</span>
+                                <span class="chip @StatusClass(a.Status)">@StatusLabel(a.Status)</span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    private MeetingsOverviewDto data = new(new(), new(), new(0, 0, 0, 0));
+    private bool loading = true;
+    private string? error;
+    private Guid? busyId, expanded;
+    private List<AttendeeDto>? attendees;
+    private System.Threading.Timer? timer;
+
+    private double Rate => data.Summary.Total == 0 ? 0
+        : (data.Summary.OnTime + data.Summary.Late) * 100.0 / data.Summary.Total;
+    private string RateText => data.Summary.Total == 0 ? "No meetings yet" : Rate.ToString("0") + "%";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+        // re-render every 30s so "check-in opens" updates on its own
+        timer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged), null, 30000, 30000);
+    }
+
+    private async Task Load()
+    {
+        try { data = await Svc.GetOverviewAsync(); error = null; }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't load meetings. Please try again."; }
+        loading = false;
+    }
+
+    private async Task CheckIn(MeetingDto m)
+    {
+        if (busyId is not null) return;
+        busyId = m.Id; error = null;
+        try
+        {
+            var result = await Svc.JoinAsync(m.Id);
+            await Load();
+            Nav.NavigateTo(result.JoinUrl);   // opens Teams / the browser
+        }
+        catch (ApiException ex) { error = ex.Message; }
+        catch (Exception) { error = "Couldn't check you in. Please try again."; }
+        finally { busyId = null; }
+    }
+
+    private async Task Toggle(MeetingDto m)
+    {
+        if (expanded == m.Id) { expanded = null; return; }
+        expanded = m.Id; attendees = null;
+        try { attendees = await Svc.GetAttendeesAsync(m.Id); }
+        catch (ApiException ex) { error = ex.Message; expanded = null; }
+        catch (Exception) { error = "Couldn't load attendees."; expanded = null; }
+    }
+
+    private static bool Live(MeetingDto m) => DateTime.UtcNow >= m.StartsAt && DateTime.UtcNow < m.EndsAt;
+    private static bool IsOpen(MeetingDto m) =>
+        DateTime.UtcNow >= m.StartsAt.AddMinutes(-15) && DateTime.UtcNow < m.EndsAt;
+    private static string OpensAt(MeetingDto m) => m.StartsAt.AddMinutes(-15).ToLocalTime().ToString("h:mm tt");
+
+    private static string When(MeetingDto m)
+    {
+        var s = m.StartsAt.ToLocalTime();
+        return $"{s:ddd, MMM d} • {s:h:mm tt} – {m.EndsAt.ToLocalTime():h:mm tt}";
+    }
+
+    private static string StatusClass(string? s) => s switch
+    {
+        "OnTime" => "green",
+        "Late" => "amber",
+        "Missed" => "red",
+        _ => "gray"
+    };
+
+    private static string StatusLabel(string? s) => s switch
+    {
+        "OnTime" => "On time",
+        "Late" => "Late",
+        "Missed" => "Missed",
+        _ => "Upcoming"
+    };
+
+    public void Dispose() => timer?.Dispose();
+}

@@ -1,0 +1,28 @@
+﻿@inject NavigationManager Nav
+
+<ErrorBoundary @ref="boundary" @key="Nav.Uri">
+    <ChildContent>@ChildContent</ChildContent>
+    <ErrorContent Context="ex">
+        <div class="card center">
+            <i class="bi bi-exclamation-triangle" style="font-size:1.6rem;color:var(--red)"></i>
+            <div class="bold" style="margin:8px 0 4px">Couldn't load this screen</div>
+            <div class="sm muted">@Text(ex)</div>
+            <button class="btn btn-primary mt" @onclick="Retry">Try again</button>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private ErrorBoundary? boundary;
+
+    private static string Text(Exception ex) =>
+#if DEBUG
+        ex.Message;
+#else
+        ex is ApiException ? ex.Message : "Something went wrong. Try again.";
+#endif
+
+    private void Retry() => boundary?.Recover();
+}
