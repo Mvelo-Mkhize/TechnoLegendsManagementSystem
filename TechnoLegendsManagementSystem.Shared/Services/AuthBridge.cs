@@ -4,7 +4,8 @@ public class AuthBridge(SupabaseAuthService auth, ISessionPersistence persistenc
 {
     public async Task<string?> GetAccessTokenAsync()
     {
-        // restore the saved session if the app just launched
+        try { await persistence.InitializeAsync(); } catch { }
+
         if (auth.CurrentSession is null)
         {
             var saved = persistence.LoadSession();
