@@ -1,0 +1,58 @@
+﻿@page "/dev-space"
+
+<div class="page-header">
+    <h1 class="page-header__title">Dev Space</h1>
+    <span class="badge badge--done">🟢 Build: Passing</span>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary">Compare Releases</button>
+    <button class="btn btn-primary">+ New Branch</button>
+</div>
+
+<div class="dev-layout">
+    <!-- Left Side: Commits -->
+    <div>
+        <div class="row-sm" style="margin-bottom: 1rem;">
+            <span class="badge badge--inprogress">main</span>
+            <span class="text-muted" style="font-size: 0.85rem;">342 Commits</span>
+        </div>
+        <div class="commit-list-ui">
+            <div class="commit-row">
+                <div class="avatar avatar-sm" style="background: #1c7ed6;">MV</div>
+                <div class="commit-row__info">
+                    <div class="commit-row__title">feat(core): implement zero-trust token exchange</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Marcus Vance committed 28m ago • ✅ verified</div>
+                </div>
+                <div class="text-faint" style="font-size: 0.75rem;">14 files <span style="color: #0ca678;">+342</span> <span style="color: #d6336c;">-48</span></div>
+            </div>
+            <div class="commit-row">
+                <div class="avatar avatar-sm">AR</div>
+                <div class="commit-row__info">
+                    <div class="commit-row__title">fix(auth): prevent session race condition</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">Alex Rivera committed 3h ago • ✅ verified</div>
+                </div>
+                <div class="text-faint" style="font-size: 0.75rem;">3 files <span style="color: #0ca678;">+24</span> <span style="color: #d6336c;">-12</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side: Code Diff -->
+    <div class="code-editor">
+        <div class="code-editor__header">
+            <span>src/api/auth.service.ts</span>
+            <div class="spacer"></div>
+            <span class="badge">View Full</span>
+        </div>
+        <div class="code-editor__content">
+            <span class="diff-context">@@ -42,8 +42,14 @@ export class AuthService {</span>
+            <span class="diff-context">  async validateHandshake(token: string) {</span>
+            <span class="diff-del">-   return this.legacyEnclave.verify(token);</span>
+            <span class="diff-add">+   const enclaveClaims = await this.zeroTrust.verify(token);</span>
+            <span class="diff-add">+   if (!enclaveClaims.isAuthorizedCluster) {</span>
+            <span class="diff-add">+     throw new EnclaveUnauthorizedException();</span>
+            <span class="diff-add">+   }</span>
+            <span class="diff-add">+   return this.tokenExchange.mintSession(enclaveClaims);</span>
+            <span class="diff-context">  }</span>
+            <span class="diff-context">}</span>
+        </div>
+    </div>
+</div>

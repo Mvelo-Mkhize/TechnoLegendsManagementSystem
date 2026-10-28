@@ -1,0 +1,72 @@
+﻿@page "/audit"
+
+<div class="page-header">
+    <h1 class="page-header__title">Security Audit Log</h1>
+    <span class="badge badge--done">Immutable Ledger • TLS 1.3</span>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary">Audit Config</button>
+    <button class="btn btn-primary">Export Log</button>
+</div>
+
+<div class="audit-stats">
+    <div class="audit-stat-box">
+        <span class="text-muted" style="font-size: 0.75rem; font-weight: 600;">24h EVENT VOLUME</span>
+        <h2>1,428 <small style="font-size: 0.85rem; color: var(--tl-success);">+4.8%</small></h2>
+        <span class="text-muted" style="font-size: 0.8rem;">Events</span>
+    </div>
+    <div class="audit-stat-box">
+        <span class="text-muted" style="font-size: 0.75rem; font-weight: 600;">AUTHORIZATION RATE</span>
+        <h2>99.2%</h2>
+        <span class="text-muted" style="font-size: 0.8rem;">Success</span>
+    </div>
+    <div class="audit-stat-box">
+        <span class="text-muted" style="font-size: 0.75rem; font-weight: 600;">BLOCKED ANOMALIES</span>
+        <h2 style="color: var(--tl-danger);">14</h2>
+        <span class="text-muted" style="font-size: 0.8rem;">Isolated</span>
+    </div>
+    <div class="audit-stat-box">
+        <span class="text-muted" style="font-size: 0.75rem; font-weight: 600;">LEDGER INTEGRITY</span>
+        <h2>100%</h2>
+        <span class="text-muted" style="font-size: 0.8rem;">Synced</span>
+    </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>Actor / Identity</th>
+                <th>Event & Action</th>
+                <th>Resource / Target</th>
+                <th>Origin / Protocol</th>
+                <th>Result / Ledger</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <div class="row-sm">
+                        <div class="avatar avatar-sm">AR</div>
+                        <div><strong>Alex Rivera</strong><div class="text-muted" style="font-size: 0.75rem;">lead.admin@cluster</div></div>
+                    </div>
+                </td>
+                <td><strong>OIDC Enclave Token Exchange</strong><br /><span class="text-muted" style="font-size: 0.75rem;">Session elevated • Scope: dev-root</span></td>
+                <td><span class="badge">auth:enclave-01</span></td>
+                <td>192.168.1.104<br /><span class="text-muted" style="font-size: 0.75rem;">Just now • Campus Lab</span></td>
+                <td><span class="badge badge--done">200 OK</span></td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="row-sm">
+                        <div class="avatar avatar-sm" style="background: #1c7ed6;">MV</div>
+                        <div><strong>Marcus Vance</strong><div class="text-muted" style="font-size: 0.75rem;">marcus.v@techno.dev</div></div>
+                    </div>
+                </td>
+                <td><strong>Git Force Push Rejected</strong><br /><span class="text-muted" style="font-size: 0.75rem;">Branch rule violation • protected</span></td>
+                <td><span class="badge">git:core-engine/main</span></td>
+                <td>104.28.19.42<br /><span class="text-muted" style="font-size: 0.75rem;">4m ago • SSH-ed25519</span></td>
+                <td><span class="badge badge--high">403 Blocked</span></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

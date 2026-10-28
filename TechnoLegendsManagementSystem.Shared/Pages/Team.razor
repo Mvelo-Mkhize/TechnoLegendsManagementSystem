@@ -1,0 +1,64 @@
+﻿@page "/team"
+
+<div class="page-header">
+    <h1 class="page-header__title">Team & Access Control</h1>
+    <div class="spacer"></div>
+    <button class="btn btn-primary">+ Add Member</button>
+</div>
+
+<div class="team-layout">
+    <!-- Left: Member List -->
+    <div class="card">
+        <div class="card__header">
+            <h3>Directory (48)</h3>
+            <div class="spacer"></div>
+            <input type="text" class="form-control" placeholder="Search roster..." style="max-width: 200px;" />
+        </div>
+        <div>
+            <div class="member-row">
+                <div class="avatar">AR</div>
+                <div class="member-info">
+                    <strong>Alex Rivera</strong>
+                    <small>alex.rivera@technolegends.org</small>
+                </div>
+                <span class="badge badge--high" style="background: var(--tl-text); color: white;">Admin</span>
+                <span class="badge badge--done">✅ Verified</span>
+            </div>
+            <div class="member-row">
+                <div class="avatar" style="background: #1c7ed6;">MV</div>
+                <div class="member-info">
+                    <strong>Marcus Vance</strong>
+                    <small>m.vance@technolegends.org</small>
+                </div>
+                <span class="badge badge--inprogress">Dept Lead</span>
+                <span class="badge badge--done">✅ Verified</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Permissions Matrix -->
+    <div class="card">
+        <div class="card__header">
+            <h3>Role Permissions Matrix</h3>
+        </div>
+        <div class="card__body">
+            <div class="permission-box">
+                <h4>📄 Documents & Specs <span class="text-faint">DOC_ACL_01</span></h4>
+                <div class="row" style="font-size: 0.8rem; align-items: flex-start;">
+                    <div style="flex: 1;"><strong>ADMIN</strong><br /><span class="text-muted">Full / Delete</span></div>
+                    <div style="flex: 1;"><strong>DEPT LEAD</strong><br /><span class="text-muted">Create / Edit</span></div>
+                    <div style="flex: 1;"><strong>MEMBER</strong><br /><span class="text-muted">Read</span></div>
+                </div>
+            </div>
+
+            <div class="permission-box">
+                <h4>🎨 Design System <span class="text-faint">DS_ACL_02</span></h4>
+                <div class="row" style="font-size: 0.8rem; align-items: flex-start;">
+                    <div style="flex: 1;"><strong>ADMIN</strong><br /><span class="text-muted">Full / Integrations</span></div>
+                    <div style="flex: 1;"><strong>DEPT LEAD</strong><br /><span class="text-muted">Publish</span></div>
+                    <div style="flex: 1;"><strong>MEMBER</strong><br /><span class="text-muted">Inspect</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,77 @@
+﻿@page "/documents"
+
+<div class="page-header">
+    <h1 class="page-header__title">Document Repository</h1>
+    <span class="badge badge--done">148 Files Indexed</span>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary">Bulk Export</button>
+    <button class="btn btn-primary">Upload Document</button>
+</div>
+
+<div class="doc-layout">
+    <!-- Left Sidebar -->
+    <div class="sidebar-panel">
+        <div class="nav-tree">
+            <div class="nav-tree-item active">📁 All Documents <span class="badge">148</span></div>
+            <div class="nav-tree-item">⭐ Starred <span class="badge">12</span></div>
+            <div class="nav-tree-item">🕒 Recent Changes <span class="badge">24</span></div>
+        </div>
+
+        <div class="sidebar__section-label" style="margin-top: 1.5rem;">Repository Folders</div>
+        <div class="nav-tree">
+            <div class="nav-tree-item">📁 Marketing Briefs <span>14</span></div>
+            <div class="nav-tree-item active">📂 Business Req. <span>28</span></div>
+            <div class="nav-tree-item nav-tree-indent">• PRDs & User Flows <span>16</span></div>
+            <div class="nav-tree-item nav-tree-indent">• Architecture RFCs <span>12</span></div>
+        </div>
+    </div>
+
+    <!-- Right Content -->
+    <div class="card">
+        <div class="card__header">
+            <h3>Business Requirements</h3>
+            <div class="spacer"></div>
+            <input type="text" class="form-control" placeholder="Search documents..." style="max-width: 250px;" />
+        </div>
+        <table class="file-table">
+            <thead>
+                <tr>
+                    <th>Document Title & Description</th>
+                    <th>Format</th>
+                    <th>Version</th>
+                    <th>Owner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div class="row-sm">
+                            <div class="file-icon pdf">📄</div>
+                            <div>
+                                <strong style="color: var(--tl-primary);">TLMS_V4_Architecture_Specification.pdf</strong>
+                                <div class="text-muted" style="font-size: 0.75rem;">Primary system design doc.</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge">.pdf</span></td>
+                    <td>v4.8.2</td>
+                    <td><div class="row-sm"><div class="avatar avatar-sm">AR</div> Alex</div></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="row-sm">
+                            <div class="file-icon doc">📝</div>
+                            <div>
+                                <strong style="color: var(--tl-primary);">PRD_Student_Mentorship_Module.docx</strong>
+                                <div class="text-muted" style="font-size: 0.75rem;">Full capability breakdown.</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge">.docx</span></td>
+                    <td>v3.0</td>
+                    <td><div class="row-sm"><div class="avatar avatar-sm">MV</div> Marcus</div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

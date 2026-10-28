@@ -1,0 +1,63 @@
+﻿@page "/settings"
+
+<div class="page-header">
+    <h1 class="page-header__title">Web Integrations & Workspaces</h1>
+    <div class="spacer"></div>
+    <button class="btn btn-secondary">Documentation</button>
+</div>
+
+<div class="settings-layout">
+    <!-- Figma Integration -->
+    <div class="integration-card">
+        <div class="row">
+            <div style="font-size: 2rem;">🎨</div>
+            <div>
+                <h3 style="margin: 0;">Figma Workspace Sync</h3>
+                <span class="badge badge--done" style="margin-top: 0.5rem;">🟢 Connected</span>
+            </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.9rem;">Bi-directional component synchronization & token export.</p>
+
+        <div>
+            <label class="form-label" style="margin-bottom: 0.5rem;">Personal Access Token (PAT)</label>
+            <div class="api-key-box">
+                <span>fig_pat_9381e09bc4892c9081a27f8841a7f2</span>
+                <span>👁️ 📋</span>
+            </div>
+        </div>
+
+        <div class="row-sm" style="margin-top: 1rem;">
+            <button class="btn btn-secondary">Ping Test: 42ms OK</button>
+            <button class="btn btn-ghost">Rotate Key</button>
+            <div class="spacer"></div>
+            <button class="btn btn-danger btn-sm">Disconnect</button>
+        </div>
+    </div>
+
+    <!-- Canva Integration -->
+    <div class="integration-card">
+        <div class="row">
+            <div style="font-size: 2rem;">🖌️</div>
+            <div>
+                <h3 style="margin: 0;">Canva Brand Kit</h3>
+                <span class="badge badge--done" style="margin-top: 0.5rem;">🟢 Connected</span>
+            </div>
+        </div>
+        <p class="text-muted" style="font-size: 0.9rem;">Social media templates, event flyers & automated brand assets.</p>
+
+        <div>
+            <label class="form-label" style="margin-bottom: 0.5rem;">Partner OAuth Client Secret</label>
+            <div class="api-key-box">
+                <span>cnv_sec_live_9488bdf0239ca445b20149b1</span>
+                <span>👁️ 📋</span>
+            </div>
+        </div>
+
+        <div class="row-sm" style="margin-top: 1rem;">
+            <button class="btn btn-secondary">Ping Test: 58ms OK</button>
+            <button class="btn btn-ghost">Rotate Secret</button>
+            <div class="spacer"></div>
+            <button class="btn btn-danger btn-sm">Disconnect</button>
+        </div>
+    </div>
+</div>

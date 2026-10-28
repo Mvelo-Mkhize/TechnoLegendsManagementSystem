@@ -1,0 +1,56 @@
+﻿@page "/design"
+
+<div class="page-header">
+    <h1 class="page-header__title">Design Hub</h1>
+    <span class="badge badge--done">🟢 Live Sync Active</span>
+    <div class="spacer"></div>
+    <button class="btn btn-primary">+ New Design</button>
+</div>
+
+<!-- Figma Sync Banner -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card__body row">
+        <div style="font-size: 2rem;">🎨</div>
+        <div>
+            <h3 style="margin: 0;">Figma Workspace Sync</h3>
+            <p class="text-muted" style="margin: 0; font-size: 0.85rem;">14 Files Synced • Tokens v4.8 (384 vars)</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-secondary">Manage Sync</button>
+    </div>
+</div>
+
+<h3 style="margin-top: 2rem;">Active Design Projects</h3>
+<div class="design-grid">
+    <!-- Card 1 -->
+    <div class="design-card">
+        <div class="design-card__preview" style="background: linear-gradient(45deg, #1e293b, #3b5bdb);">
+            <span class="badge badge--inprogress" style="position: absolute; top: 10px; left: 10px;">Figma</span>
+            <span class="badge" style="position: absolute; top: 10px; right: 10px;">In Review</span>
+            <span style="font-size: 3rem;">🖥️</span>
+        </div>
+        <div class="design-card__content">
+            <div class="design-card__title">Techno Legends Brand...</div>
+            <div class="text-muted" style="font-size: 0.8rem;">Color variables, tokens, and buttons.</div>
+            <div class="design-card__meta">
+                <div class="avatar avatar-sm">AR</div> Alex Rivera • 18m ago
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="design-card">
+        <div class="design-card__preview" style="background: #f8fafc;">
+            <span class="badge badge--todo" style="position: absolute; top: 10px; left: 10px;">Canva</span>
+            <span class="badge badge--done" style="position: absolute; top: 10px; right: 10px;">Published</span>
+            <span style="font-size: 3rem;">📱</span>
+        </div>
+        <div class="design-card__content">
+            <div class="design-card__title">Fellowship Onboarding...</div>
+            <div class="text-muted" style="font-size: 0.8rem;">16:9 widescreen orientation.</div>
+            <div class="design-card__meta">
+                <div class="avatar avatar-sm">ER</div> Elena Rostova • 2h ago
+            </div>
+        </div>
+    </div>
+</div>
