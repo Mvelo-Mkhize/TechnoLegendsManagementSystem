@@ -1,6 +1,6 @@
 ﻿@page "/"
 @attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization 
+@using Microsoft.AspNetCore.Authorization
 @inject NavigationManager Nav
 
 <PageTitle>Dashboard</PageTitle>
@@ -46,7 +46,7 @@
 
     <div class="dashboard-grid">
         <div class="card">
-            <div class="card-header">
+            <div class="card__header">
                 <h3>Department Velocity</h3>
                 <span class="badge">Sprint 42</span>
                 <span class="badge secondary">Velocity Quorum</span>
@@ -70,7 +70,7 @@
         </div>
 
         <div class="card">
-            <div class="card-header">
+            <div class="card__header">
                 <h3>Recent Documents</h3>
                 <span class="badge">148 Total</span>
                 <a href="#" class="view-all">View All (148) →</a>
@@ -99,7 +99,7 @@
 
         <div class="dashboard-sidebar">
             <div class="card">
-                <div class="card-header"><h4>Recent Commits</h4><a href="#">GitHub Logs →</a></div>
+                <div class="card__header"><h4>Recent Commits</h4><a href="#">GitHub Logs →</a></div>
                 <div class="commit-list">
                     <div class="commit-item"><span class="badge">main</span><span class="hash">#f9e82c1</span><p>refactor(auth): migrate JWT tokens to ...</p><small>Alex R. • 12m ago</small></div>
                     <div class="commit-item"><span class="badge">feat/auth</span><span class="hash">#a410de8</span><p>feat(ui): implement adaptive token sets</p><small>Sarah C. • 45m ago</small></div>
@@ -107,7 +107,7 @@
                 </div>
             </div>
             <div class="card">
-                <div class="card-header"><h4>Active App Demos</h4><span class="badge success">16 Live</span></div>
+                <div class="card__header"><h4>Active App Demos</h4><span class="badge success">16 Live</span></div>
                 <div class="demo-list">
                     <div class="demo-item"><span>📱</span><div><strong>TLMS Mobile v4.8 Beta</strong><small>iOS / Android Preview</small></div><button class="btn btn-sm">Launch</button></div>
                     <div class="demo-item"><span>💻</span><div><strong>WebRTC Voice Room</strong><small>Browser Mesh Protocol v2</small></div><button class="btn btn-sm">Connect</button></div>
@@ -117,13 +117,12 @@
     </div>
 </div>
 
-@code { 
+@code {
     protected override void OnInitialized()
     {
         if (OperatingSystem.IsAndroid())
             Nav.NavigateTo("/home", replace: true);
-    } 
-     
+    }
 
     private record Velocity(string Icon, string Name, int Percent, string Detail);
     private record DocItem(string Name, string Detail, string Dept, string Author);

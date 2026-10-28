@@ -1,23 +1,38 @@
 ﻿@inherits LayoutComponentBase
 @using System.Security.Claims
 
-<div class="page">
-    <div class="sidebar">
+<div class="app-shell">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
-    <main>
-        <div class="top-row px-4">
+    </aside>
+
+    <div class="main">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar__title">Workspace</div>
+            <div class="topbar__spacer"></div>
+
             <AuthorizeView>
                 <Authorized>
-                    <span class="user-email">
-                        @context.User.FindFirst(ClaimTypes.Email)?.Value
-                    </span>
-                    <button class="btn btn-link" @onclick="SignOutAsync">Sign Out</button>
+                    <div class="row-sm">
+                        <span class="text-muted" style="font-size: 0.9rem;">
+                            @context.User.FindFirst(ClaimTypes.Email)?.Value
+                        </span>
+                        <!-- Use the avatar style for the user -->
+                        <div class="avatar avatar-sm">
+                            @(context.User.FindFirst(ClaimTypes.Email)?.Value?.Substring(0, 1).ToUpper())
+                        </div>
+                        <button class="btn btn-ghost btn-sm" @onclick="SignOutAsync">Sign Out</button>
+                    </div>
                 </Authorized>
             </AuthorizeView>
-        </div>
-        <article class="content px-4">@Body</article>
-    </main>
+        </header>
+
+        <!-- Main Content Area -->
+        <article class="content">
+            @Body
+        </article>
+    </div>
 </div>
 
 @code {
