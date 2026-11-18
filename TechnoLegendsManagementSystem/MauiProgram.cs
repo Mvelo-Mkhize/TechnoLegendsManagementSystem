@@ -40,21 +40,17 @@ public static class MauiProgram
         });
 
         builder.Services.AddSingleton<ISessionPersistence, MauiSessionHandler>();
-        builder.Services.AddSingleton<SupabaseAuthService>(); 
+        builder.Services.AddSingleton<SupabaseAuthService>();
+        builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<IAuthService, AuthBridge>();
         builder.Services.AddScoped<AuthenticationStateProvider, SupabaseAuthStateProvider>();
         builder.Services.AddAuthorizationCore();
         builder.Services.AddCascadingAuthenticationState();
 
         // --- Tasks / chat / profile (API-backed) ---
-        #if ANDROID
-                // Emulator uses 10.0.2.2, physical device must use your PC's LAN IP
-                string apiBase = DeviceInfo.DeviceType == DeviceType.Virtual
-                    ? "http://10.0.2.2:5080"          // Android emulator
-                    : "http://192.168.18.252:5080";     // physical device — your PC's LAN IP
-        #else
-            string apiBase = "http://localhost:5080";
-        #endif
+        
+            string apiBase = "https://technolegendsmobileapi20261118175613-enabaqb7epducqaz.southafricanorth-01.azurewebsites.net/";
+
 
         builder.Services.AddTransient<AuthHeaderHandler>();
         builder.Services.AddHttpClient("api", c =>
