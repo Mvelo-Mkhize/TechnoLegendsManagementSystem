@@ -12,9 +12,23 @@
     <div class="center">
         <div class="brand-icon"><i class="bi bi-terminal"></i></div>
         <h3>Verify your account</h3>
-        <p class="muted xs" style="margin:4px 0">Enter the 6-digit code from your authenticator app</p>
-        <p class="xs muted" style="margin:4px 0">Code sent to <strong>@Email</strong></p>
+        <p class="xs muted" style="margin:4px 0">Signed in as <strong>@Email</strong></p>
     </div>
+
+    @if (Secret is not null)
+    {
+        <div class="center mt">
+            <p class="xs bold">Link your authenticator app (one time only)</p>
+            <p class="xs muted">In Google Authenticator tap +, choose "Enter a setup key", and type this key:</p>
+            <div class="bold" style="word-break:break-all;font-size:1rem;letter-spacing:1px;margin:8px 0">@Secret</div>
+            <img src="@QrCode" alt="QR code" style="width:160px;height:160px;background:#fff;padding:8px;border-radius:12px" />
+            <p class="xs muted" style="margin-top:8px">Then enter the 6-digit code it shows below.</p>
+        </div>
+    }
+    else
+    {
+        <p class="muted xs center" style="margin:4px 0">Enter the 6-digit code from your authenticator app</p>
+    }
 
     <div class="row between mt">
         <span class="xs bold muted">AUTHENTICATOR CODE</span>
@@ -82,15 +96,16 @@
         ("6", "MNO"), ("7", "PQRS"), ("8", "TUV"), ("9", "WXYZ")
     };
 
-    [Inject] private SupabaseAuthService AuthService { get; set; } = default!;
+    [Inject] private MobileAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthProvider { get; set; } = default!;
 
     private string passcode = "";
     private bool IsVerifying { get; set; }
-    private int Countdown { get; set; } = 42;
     private string? FactorId { get; set; }
     private string Email { get; set; } = "";
+    private string? QrCode;
+    private string? Secret;
     private string? error;
 
     protected override async Task OnInitializedAsync()
@@ -98,6 +113,18 @@
         Email = AuthService.CurrentSession?.User?.Email ?? "";
         var factors = await AuthService.ListFactorsAsync();
         FactorId = factors?.FirstOrDefault()?.Id;
+
+        if (FactorId is null)
+        {
+            try
+            {
+                var e = await AuthService.EnrollTotpAsync();
+                FactorId = e.FactorId;
+                QrCode = e.QrCode;
+                Secret = e.Secret;
+            }
+            catch (Exception ex) { error = ex.Message; }
+        }
     }
 
     private void AppendDigit(string digit)
@@ -134,6 +161,5 @@
         finally { IsVerifying = false; }
     }
 
-    private Task ResendCodeAsync() => Task.CompletedTask;
     private void GoBack() => Nav.NavigateTo("/mobile-login");
 }

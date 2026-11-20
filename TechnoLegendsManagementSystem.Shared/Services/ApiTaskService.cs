@@ -81,5 +81,8 @@ namespace TechnoLegendsManagementSystem.Shared.Services
             var res = await Call(h => h.GetAsync("api/lookups"));
             return (await res.Content.ReadFromJsonAsync<AssignLookups>())!;
         }
+
+        public async Task SetStatusAsync(string id, WorkStatus status)
+    => await Call(h => h.PostAsJsonAsync($"api/tasks/{id}/status", new { status }));
     }
 }
